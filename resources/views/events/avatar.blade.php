@@ -46,7 +46,7 @@
                     <div class="mb-3 text-sm text-gray-600">
                         Background is the event’s avatar. Your photo will start centered — drag to reposition or use the handles to resize.
                     </div>
-                    <div class="w-full overflow-auto rounded-xl border border-dashed border-gray-300 bg-gray-50 p-3">
+                    <div id="canvas-wrap" class="w-full overflow-auto rounded-xl border border-dashed border-gray-300 bg-gray-50 p-3">
                         <canvas id="avatar-canvas"></canvas>
                     </div>
                 </div>
@@ -123,19 +123,63 @@
 
             // Fabric canvas (event avatar as background)
             const canvas = new fabric.Canvas('avatar-canvas', { selection: false, preserveObjectStacking: true });
-            let userImgObj = null;
+            let bgImg = null;        // original background image
+            let userImgObj = null;   // your cropped circle the user adds
 
-            fabric.Image.fromURL(bgUrl, (img) => {
-                const maxDim = 500; // max canvas dimension
-                const largest = Math.max(img.width, img.height);
-                const scale = largest > maxDim ? (maxDim / largest) : 1;
-                const cw = Math.round(img.width * scale);
-                const ch = Math.round(img.height * scale);
-                canvas.setWidth(cw); canvas.setHeight(ch);
-                canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
-                    scaleX: scale, scaleY: scale, originX: 'left', originY: 'top'
+            // Fit the canvas to the wrapper and scale bg to fill it 1:1
+            function resizeCanvas() {
+                if (!bgImg) return;
+
+                const wrap = document.getElementById('canvas-wrap');
+                // Available width (cap to something sensible so it doesn’t grow forever)
+                const wrapW = Math.max(280, Math.min(900, wrap.clientWidth || 0));
+                const ratio = bgImg.height / bgImg.width;
+                const cw = Math.round(wrapW);
+                const ch = Math.round(wrapW * ratio);
+
+                // iOS crispness: backstore pixels = css pixels * DPR, then zoom to DPR
+                const dpr = Math.max(1, window.devicePixelRatio || 1);
+
+                // Set CSS size
+                canvas.setDimensions({ width: cw, height: ch }, { cssOnly: true });
+                // Set backing store size
+                canvas.setDimensions({ width: cw * dpr, height: ch * dpr }, { backstoreOnly: true });
+                canvas.setZoom(dpr);
+
+                // Scale bg to exactly fill canvas
+                const scaleX = cw / bgImg.width;
+                const scaleY = ch / bgImg.height;
+                canvas.setBackgroundImage(bgImg, canvas.requestRenderAll.bind(canvas), {
+                originX: 'left',
+                originY: 'top',
+                scaleX,
+                scaleY,
                 });
+
+                // Keep user photo centered after resizes (don’t change the user’s scale)
+                if (userImgObj) {
+                userImgObj.set({
+                    left: canvas.getWidth() / 2,
+                    top:  canvas.getHeight() / 2,
+                });
+                userImgObj.setCoords();
+                }
+
+                canvas.requestRenderAll();
+            }
+
+            // Throttled resize handler for rotation/viewport changes
+            let rAF;
+            window.addEventListener('resize', () => {
+                cancelAnimationFrame(rAF);
+                rAF = requestAnimationFrame(resizeCanvas);
             });
+
+            // Load the background, then do the first layout
+            fabric.Image.fromURL(bgUrl, (img) => {
+                bgImg = img;
+                resizeCanvas();
+            }, { crossOrigin: 'anonymous' });
 
             // Elements
             const input = document.getElementById('userImageInput');
