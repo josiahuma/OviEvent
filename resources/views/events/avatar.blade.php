@@ -136,62 +136,56 @@
             const bgUrl = @json(asset('storage/' . $event->avatar_url));
 
             // Fabric canvas (event avatar as background)
-            const canvas = new fabric.Canvas('avatar-canvas', { selection: false, preserveObjectStacking: true });
+            const canvas = new fabric.Canvas('avatar-canvas', {
+                selection: false,
+                preserveObjectStacking: true,
+                enableRetinaScaling: true
+                });
             let bgImg = null;        // original background image
             let userImgObj = null;   // your cropped circle the user adds
 
             // Fit the canvas to the wrapper and scale bg to fill it 1:1
            function resizeCanvas() {
-                if (!bgImg) return;
+            if (!bgImg) return;
 
-                const wrap = document.getElementById('canvas-wrap');
+            const wrap  = document.getElementById('canvas-wrap');
 
-                // compute exact inner width (content box), avoid sub-pixel overflow by shaving 1px
-                const cs   = getComputedStyle(wrap);
-                const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
-                const padY = parseFloat(cs.paddingTop)  + parseFloat(cs.paddingBottom);
-                const wrapW = wrap.getBoundingClientRect().width || 0;
-                const innerW = Math.max(260, Math.floor(wrapW - padX - 1)); // width we actually have
+            // Exact inner width of wrapper (content-box)
+            const cs   = getComputedStyle(wrap);
+            const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+            const padY = parseFloat(cs.paddingTop)  + parseFloat(cs.paddingBottom);
+            const wrapW = wrap.getBoundingClientRect().width || 0;
 
-                // keep the poster’s aspect ratio
-                const ratio = bgImg.height / bgImg.width;
-                const cw = innerW;
-                const ch = Math.round(cw * ratio);
+            const innerW = Math.max(260, Math.floor(wrapW - padX - 1)); // avoid sub-pixel scrollbar
 
-                // make the wrapper grow to fit the canvas height
-                wrap.style.height = `${ch + padY}px`;
+            // Keep the poster aspect ratio
+            const ratio = bgImg.height / bgImg.width;
+            const cw = innerW;
+            const ch = Math.round(cw * ratio);
 
-                // retina crispness
-                const dpr = Math.max(1, window.devicePixelRatio || 1);
+            // Make the wrapper match canvas height so nothing gets clipped
+            wrap.style.height = `${ch + padY}px`;
 
-                // 1) CSS size (what the user sees)
-                canvas.setDimensions({ width: cw, height: ch }, { cssOnly: true });
-                const el = canvas.getElement();
-                el.style.width = `${cw}px`;
-                el.style.height = `${ch}px`;
-                el.style.maxWidth = 'none';
-                el.style.maxHeight = 'none';
-                el.style.display = 'block';
+            // Set canvas size (Fabric sets both CSS & backstore sizes)
+            canvas.setDimensions({ width: cw, height: ch });
 
-                // 2) Backing store size (actual pixels)
-                canvas.setDimensions({ width: cw * dpr, height: ch * dpr }, { backstoreOnly: true });
-                canvas.setZoom(dpr);
+            // Scale the background to exactly fill the canvas (no DPR math needed now)
+            const scale = cw / bgImg.width;
+            canvas.setBackgroundImage(
+                bgImg,
+                canvas.renderAll.bind(canvas),
+                { originX: 'left', originY: 'top', scaleX: scale, scaleY: scale }
+            );
 
-                // 3) Scale background to exactly fill the canvas
-                const scale = cw / bgImg.width;
-                canvas.setBackgroundImage(
-                    bgImg,
-                    canvas.renderAll.bind(canvas),
-                    { left: 0, top: 0, originX: 'left', originY: 'top', scaleX: scale, scaleY: scale }
-                );
+            // Keep user photo centered after resizes
+            if (userImgObj) {
+                userImgObj.set({ left: canvas.getWidth() / 2, top: canvas.getHeight() / 2 });
+                userImgObj.setCoords();
+            }
 
-                if (userImgObj) {
-                    userImgObj.set({ left: canvas.getWidth() / 2, top: canvas.getHeight() / 2 });
-                    userImgObj.setCoords();
-                }
+            canvas.requestRenderAll();
+            }
 
-                canvas.requestRenderAll();
-                }
 
 
 
