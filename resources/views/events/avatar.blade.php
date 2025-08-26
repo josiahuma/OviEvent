@@ -54,10 +54,9 @@
         </div>
     </div>
 
-    {{-- Cropper Modal (mounted to body at runtime) --}}
+    {{-- Cropper Modal --}}
     <div id="cropperModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[1000]">
-        <div class="bg-white rounded-2xl shadow-xl mx-4 overflow-hidden"
-             style="width:min(92vw, 900px)">
+        <div class="bg-white rounded-2xl shadow-xl mx-4 overflow-hidden" style="width:min(92vw, 900px)">
             <div class="p-3 border-b flex items-center justify-between">
                 <h3 class="font-semibold text-gray-800 text-sm">Position your photo inside the circle</h3>
                 <button id="cropCancel" class="text-gray-500 hover:text-gray-700 text-sm">Cancel</button>
@@ -65,13 +64,11 @@
 
             <div class="modal-body" id="cropArea">
                 <img id="cropperImage" alt="Crop">
-                {{-- Circle overlay (only this is visible; Cropper’s square UI is hidden by CSS) --}}
                 <div class="overlay-circle absolute inset-0">
                     <svg width="100%" height="100%">
                         <defs>
                             <mask id="circle-cutout">
                                 <rect x="0" y="0" width="100%" height="100%" fill="white"/>
-                                {{-- Center of the circle. If your ring sits a bit higher, change cy="50%" to cy="44%". --}}
                                 <circle cx="50%" cy="50%" r="35%" fill="black"/>
                             </mask>
                         </defs>
@@ -90,86 +87,69 @@
     </div>
 
     <style>
-        /* Robust crop area sizing across screens (no flex here) */
+        /* Cropper modal sizing */
         #cropperModal .modal-body {
             height: clamp(460px, 80vh, 900px);
             position: relative;
             background: #000;
         }
-        /* Make Cropper fill the container */
         #cropperModal .modal-body .cropper-container { width: 100% !important; height: 100% !important; }
         #cropperModal .modal-body img#cropperImage { max-width: 100%; max-height: 100%; display: block; }
 
-        /* Show ONLY our circle overlay — hide Cropper’s square UI */
+        /* Show only our circle */
         #cropperModal .overlay-circle { pointer-events: none; }
         #cropperModal .cropper-modal { background: transparent !important; opacity: 0 !important; }
         #cropperModal .cropper-view-box { outline: none !important; box-shadow: none !important; }
-        #cropperModal .cropper-dashed, #cropperModal .cropper-line {
-            border: none !important; background: transparent !important;
-        }
-        /* keep handles hidden, but keep the face so it can capture drags */
+        #cropperModal .cropper-dashed, #cropperModal .cropper-line { border: none !important; background: transparent !important; }
         #cropperModal .cropper-point { background: transparent !important; display: none !important; }
         #cropperModal .cropper-face  { background: transparent !important; display: block !important; }
 
+        /* Canvas: let Fabric set width/height; no !important overrides */
+        #avatar-canvas { display: block; }
     </style>
-    <style>
-    /* Let JS-set pixel sizes win; prevent any global scaling */
-        #avatar-canvas {
-            display: block;
-            max-width: none !important;
-            max-height: none !important;
-            width: auto !important;   /* do not force 100% */
-            height: auto !important;  /* let JS set explicit px height */
-        }
-
-        #canvas-wrap { overflow: hidden; }
-        #canvas-wrap canvas { display:block; }
-    </style>
-
 
     {{-- Libs BEFORE our custom script --}}
     <script src="https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
 
     <script>
-        (function () {
-            const bgUrl = @json(asset('storage/' . $event->avatar_url));
+    (function () {
+        const bgUrl = @json(asset('storage/' . $event->avatar_url));
 
-            // Fabric canvas (event avatar as background)
-            const canvas = new fabric.Canvas('avatar-canvas', {
-                selection: false,
-                preserveObjectStacking: true,
-                enableRetinaScaling: true
-                });
-            let bgImg = null;        // original background image
-            let userImgObj = null;   // your cropped circle the user adds
+        // Fabric canvas — let Fabric do retina scaling
+        const canvas = new fabric.Canvas('avatar-canvas', {
+            selection: false,
+            preserveObjectStacking: true,
+            enableRetinaScaling: true
+        });
+        let bgImg = null;
+        let userImgObj = null;
 
-            // Fit the canvas to the wrapper and scale bg to fill it 1:1
-           function resizeCanvas() {
+        function resizeCanvas() {
             if (!bgImg) return;
 
-            const wrap  = document.getElementById('canvas-wrap');
+            const wrap = document.getElementById('canvas-wrap');
+            const rect = wrap.getBoundingClientRect();
 
-            // Exact inner width of wrapper (content-box)
+            // inner content width (paddings are already excluded from content box width? Tailwind uses content-box)
             const cs   = getComputedStyle(wrap);
             const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
             const padY = parseFloat(cs.paddingTop)  + parseFloat(cs.paddingBottom);
-            const wrapW = wrap.getBoundingClientRect().width || 0;
 
-            const innerW = Math.max(260, Math.floor(wrapW - padX - 1)); // avoid sub-pixel scrollbar
+            const innerW = Math.max(260, Math.floor(rect.width - padX));
 
-            // Keep the poster aspect ratio
+            // keep original image aspect
             const ratio = bgImg.height / bgImg.width;
             const cw = innerW;
             const ch = Math.round(cw * ratio);
 
-            // Make the wrapper match canvas height so nothing gets clipped
+            // Make the wrapper tall enough so nothing gets clipped
             wrap.style.height = `${ch + padY}px`;
 
-            // Set canvas size (Fabric sets both CSS & backstore sizes)
+            // Set canvas dimensions (Fabric sets CSS + backstore correctly)
             canvas.setDimensions({ width: cw, height: ch });
 
-            // Scale the background to exactly fill the canvas (no DPR math needed now)
+            // Scale bg image to fill canvas exactly
             const scale = cw / bgImg.width;
             canvas.setBackgroundImage(
                 bgImg,
@@ -177,207 +157,185 @@
                 { originX: 'left', originY: 'top', scaleX: scale, scaleY: scale }
             );
 
-            // Keep user photo centered after resizes
+            // keep user image centered
             if (userImgObj) {
                 userImgObj.set({ left: canvas.getWidth() / 2, top: canvas.getHeight() / 2 });
                 userImgObj.setCoords();
             }
-
             canvas.requestRenderAll();
-            }
+        }
 
+        let raf;
+        window.addEventListener('resize', () => {
+            cancelAnimationFrame(raf);
+            raf = requestAnimationFrame(resizeCanvas);
+        });
 
+        fabric.Image.fromURL(bgUrl, (img) => {
+            bgImg = img;
+            resizeCanvas();
+        }, { crossOrigin: 'anonymous' });
 
+        // Elements
+        const input = document.getElementById('userImageInput');
+        const btnDownload = document.getElementById('btnDownload');
+        const modal = document.getElementById('cropperModal');
+        const cropImg = document.getElementById('cropperImage');
+        const cropUse = document.getElementById('cropUse');
+        const cropCancel = document.getElementById('cropCancel');
 
+        let cropper = null;
 
-            // Throttled resize handler for rotation/viewport changes
-            let rAF;
-            window.addEventListener('resize', () => {
-                cancelAnimationFrame(rAF);
-                rAF = requestAnimationFrame(resizeCanvas);
+        function openModal() {
+            if (modal.parentElement !== document.body) document.body.appendChild(modal);
+            modal.classList.remove('hidden'); modal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeModal() {
+            modal.classList.add('hidden'); modal.classList.remove('flex');
+            document.body.style.overflow = '';
+        }
+
+        function fitCropperToContainer(startOut = true) {
+            if (!cropper) return;
+            const c = cropper.getContainerData();
+            const i = cropper.getImageData();
+            if (!c.width || !c.height || !i.naturalWidth || !i.naturalHeight) return;
+
+            const fitScale = Math.min(c.width / i.naturalWidth, c.height / i.naturalHeight);
+            cropper.reset();
+            const startScale = startOut ? fitScale * 0.85 : fitScale;
+            cropper.zoomTo(startScale, { x: c.width / 2, y: c.height / 2 });
+
+            const size = Math.min(c.width, c.height) * 0.7;
+            cropper.setCropBoxData({
+                width: size, height: size,
+                left: (c.width - size) / 2,
+                top:  (c.height - size) / 2
             });
+        }
 
-            // Load the background, then do the first layout
-            fabric.Image.fromURL(bgUrl, (img) => {
-                bgImg = img;
-                resizeCanvas();
-            }, { crossOrigin: 'anonymous' });
+        input.addEventListener('change', (e) => {
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
 
-            // Elements
-            const input = document.getElementById('userImageInput');
-            const btnDownload = document.getElementById('btnDownload');
-            const modal = document.getElementById('cropperModal');
-            const cropImg = document.getElementById('cropperImage');
-            const cropUse = document.getElementById('cropUse');
-            const cropCancel = document.getElementById('cropCancel');
-
-            let cropper = null;
-
-            function openModal() {
-                if (modal.parentElement !== document.body) document.body.appendChild(modal);
-                modal.classList.remove('hidden'); modal.classList.add('flex');
-                document.body.style.overflow = 'hidden';
-            }
-            function closeModal() {
-                modal.classList.add('hidden'); modal.classList.remove('flex');
-                document.body.style.overflow = '';
-            }
-
-            // Fit image to container and center the (hidden) square crop box to match our circle
-            function fitCropperToContainer(startOut = true) {
-                if (!cropper) return;
-                const c = cropper.getContainerData();
-                const i = cropper.getImageData();
-                if (!c.width || !c.height || !i.naturalWidth || !i.naturalHeight) return;
-
-                const fitScale = Math.min(c.width / i.naturalWidth, c.height / i.naturalHeight);
-                cropper.reset();
-                const startScale = startOut ? fitScale * 0.85 : fitScale;
-                cropper.zoomTo(startScale, { x: c.width / 2, y: c.height / 2 });
-
-                const size = Math.min(c.width, c.height) * 0.7; // circle r="35%" ≈ 70% diameter
-                cropper.setCropBoxData({
-                    width: size, height: size,
-                    left: (c.width - size) / 2,
-                    top:  (c.height - size) / 2
-                });
-            }
-
-            // Open cropper on file select
-            input.addEventListener('change', (e) => {
-                const file = e.target.files && e.target.files[0];
-                if (!file) return;
-
-                const url = URL.createObjectURL(file);
-                cropImg.onload = () => {
-                    openModal();
-
-                    // Wait a frame so modal has correct size
-                    requestAnimationFrame(() => {
-                        if (cropper) cropper.destroy();
-
-                        cropper = new Cropper(cropImg, {
-                            // IMPORTANT: allow zooming/panning more than the container bounds
-                            viewMode: 0,
-                            center: false,
-                            dragMode: 'move',
-                            movable: true,
-                            zoomable: true,
-                            zoomOnWheel: true,
-                            zoomOnTouch: true,
-                            wheelZoomRatio: 0.1,
-                            background: false,
-                            guides: false,
-                            highlight: false,
-                            toggleDragModeOnDblclick: false,
-                            aspectRatio: 1,
-                            autoCrop: true,
-                            autoCropArea: 0.7,
-                            cropBoxMovable: false,
-                            cropBoxResizable: false,
-
-                            // Let users zoom out further but not to infinity
-                            zoom(event) {
-                                const c = cropper.getContainerData();
-                                const i = cropper.getImageData();
-                                const fit = Math.min(c.width / i.naturalWidth, c.height / i.naturalHeight);
-                                const minRatio = fit * 0.6; // allow up to 60% of "fit" (more zoom-out)
-                                if (event.detail.ratio < minRatio) {
-                                    event.preventDefault();
-                                    cropper.zoomTo(minRatio);
-                                }
-                            },
-
-                            ready() { fitCropperToContainer(true); }
-                        });
+            const url = URL.createObjectURL(file);
+            cropImg.onload = () => {
+                openModal();
+                requestAnimationFrame(() => {
+                    if (cropper) cropper.destroy();
+                    cropper = new Cropper(cropImg, {
+                        viewMode: 0,
+                        center: false,
+                        dragMode: 'move',
+                        movable: true,
+                        zoomable: true,
+                        zoomOnWheel: true,
+                        zoomOnTouch: true,
+                        wheelZoomRatio: 0.1,
+                        background: false,
+                        guides: false,
+                        highlight: false,
+                        toggleDragModeOnDblclick: false,
+                        aspectRatio: 1,
+                        autoCrop: true,
+                        autoCropArea: 0.7,
+                        cropBoxMovable: false,
+                        cropBoxResizable: false,
+                        zoom(event) {
+                            const c = cropper.getContainerData();
+                            const i = cropper.getImageData();
+                            const fit = Math.min(c.width / i.naturalWidth, c.height / i.naturalHeight);
+                            const minRatio = fit * 0.6;
+                            if (event.detail.ratio < minRatio) {
+                                event.preventDefault();
+                                cropper.zoomTo(minRatio);
+                            }
+                        },
+                        ready() { fitCropperToContainer(true); }
                     });
-                };
-                cropImg.src = url;
+                });
+            };
+            cropImg.src = url;
+        });
+
+        window.addEventListener('resize', () => {
+            if (!cropper) return;
+            requestAnimationFrame(() => fitCropperToContainer(false));
+        });
+
+        cropCancel.addEventListener('click', () => {
+            try { cropper && cropper.destroy(); } catch {}
+            cropper = null;
+            closeModal();
+            input.value = '';
+        });
+
+        cropUse.addEventListener('click', () => {
+            if (!cropper) return;
+
+            const SIZE = 900;
+            const square = cropper.getCroppedCanvas({
+                width: SIZE, height: SIZE,
+                imageSmoothingEnabled: true, imageSmoothingQuality: 'high'
             });
 
-            // Keep it correct when window size changes
-            window.addEventListener('resize', () => {
-                if (!cropper) return;
-                requestAnimationFrame(() => fitCropperToContainer(false));
-            });
+            const circleCanvas = document.createElement('canvas');
+            circleCanvas.width = SIZE; circleCanvas.height = SIZE;
+            const ctx = circleCanvas.getContext('2d');
+            ctx.clearRect(0, 0, SIZE, SIZE);
+            ctx.beginPath(); ctx.arc(SIZE/2, SIZE/2, SIZE/2, 0, Math.PI*2); ctx.closePath();
+            ctx.clip();
+            ctx.drawImage(square, 0, 0, SIZE, SIZE);
 
-            // Cancel crop
-            cropCancel.addEventListener('click', () => {
-                try { cropper && cropper.destroy(); } catch {}
-                cropper = null;
-                closeModal();
-                input.value = '';
-            });
+            const dataUrl = circleCanvas.toDataURL('image/png');
 
-            // Confirm / Use photo -> circular PNG -> add to Fabric (draggable + uniform-resize)
-            cropUse.addEventListener('click', () => {
-                if (!cropper) return;
+            const targetDiameterRatio = 0.36;
+            const targetDiameter = Math.min(canvas.getWidth(), canvas.getHeight()) * targetDiameterRatio;
 
-                const SIZE = 900; // export resolution for the user circle
-                const square = cropper.getCroppedCanvas({
-                    width: SIZE, height: SIZE,
-                    imageSmoothingEnabled: true, imageSmoothingQuality: 'high'
+            fabric.Image.fromURL(dataUrl, (img) => {
+                const scale = targetDiameter / img.width;
+                img.scale(scale);
+                img.set({
+                    left: canvas.getWidth() / 2,
+                    top: canvas.getHeight() / 2,
+                    originX: 'center',
+                    originY: 'center',
+                    selectable: true,
+                    hasControls: true,
+                    hasBorders: true,
+                    cornerStyle: 'circle',
+                    borderColor: '#6366f1',
+                    cornerColor: '#6366f1',
+                    cornerSize: 10,
+                    lockUniScaling: true,
                 });
 
-                // Mask into a circle
-                const circleCanvas = document.createElement('canvas');
-                circleCanvas.width = SIZE; circleCanvas.height = SIZE;
-                const ctx = circleCanvas.getContext('2d');
-                ctx.clearRect(0, 0, SIZE, SIZE);
-                ctx.beginPath(); ctx.arc(SIZE/2, SIZE/2, SIZE/2, 0, Math.PI*2); ctx.closePath();
-                ctx.clip();
-                ctx.drawImage(square, 0, 0, SIZE, SIZE);
+                if (userImgObj) canvas.remove(userImgObj);
+                userImgObj = img;
+                canvas.add(userImgObj).setActiveObject(userImgObj);
+                userImgObj.bringToFront();
+                canvas.renderAll();
 
-                const dataUrl = circleCanvas.toDataURL('image/png');
-
-                // Size to your ring (tweak ratio if your ring is larger/smaller)
-                const targetDiameterRatio = 0.36; // try 0.32–0.45 to match your template
-                const targetDiameter = Math.min(canvas.getWidth(), canvas.getHeight()) * targetDiameterRatio;
-
-                fabric.Image.fromURL(dataUrl, (img) => {
-                    const scale = targetDiameter / img.width; // width == height
-                    img.scale(scale);
-                    img.set({
-                        left: canvas.getWidth() / 2,
-                        top: canvas.getHeight() / 2,
-                        originX: 'center',
-                        originY: 'center',
-                        selectable: true,
-                        hasControls: true,
-                        hasBorders: true,
-                        cornerStyle: 'circle',
-                        borderColor: '#6366f1',
-                        cornerColor: '#6366f1',
-                        cornerSize: 10,
-                        lockUniScaling: true, // keep perfectly round while resizing
-                    });
-
-                    if (userImgObj) canvas.remove(userImgObj);
-                    userImgObj = img;
-                    canvas.add(userImgObj).setActiveObject(userImgObj);
-                    userImgObj.bringToFront();
-                    canvas.renderAll();
-
-                    btnDownload.disabled = false;
-                });
-
-                try { cropper.destroy(); } catch {}
-                cropper = null;
-                closeModal();
+                btnDownload.disabled = false;
             });
 
-            // Download final composite
-            btnDownload.addEventListener('click', () => {
-                canvas.discardActiveObject(); canvas.renderAll();
-                const dataURL = canvas.toDataURL({ format: 'png', quality: 1 });
-                const fileNameBase = @json(\Illuminate\Support\Str::slug($event->name) ?: 'event');
-                const a = document.createElement('a');
-                a.href = dataURL;
-                a.download = `${fileNameBase}_display_picture.png`;
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-            });
-        })();
+            try { cropper.destroy(); } catch {}
+            cropper = null;
+            closeModal();
+        });
+
+        btnDownload.addEventListener('click', () => {
+            canvas.discardActiveObject(); canvas.renderAll();
+            const dataURL = canvas.toDataURL({ format: 'png', quality: 1 });
+            const fileNameBase = @json(\Illuminate\Support\Str::slug($event->name) ?: 'event');
+            const a = document.createElement('a');
+            a.href = dataURL;
+            a.download = `${fileNameBase}_display_picture.png`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        });
+    })();
     </script>
 </x-app-layout>
