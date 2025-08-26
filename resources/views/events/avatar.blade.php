@@ -274,7 +274,7 @@
         cropUse.addEventListener('click', () => {
             if (!cropper) return;
 
-            const SIZE = 900;
+            const SIZE = 1400;
             const square = cropper.getCroppedCanvas({
                 width: SIZE, height: SIZE,
                 imageSmoothingEnabled: true, imageSmoothingQuality: 'high'
@@ -326,8 +326,18 @@
         });
 
         btnDownload.addEventListener('click', () => {
-            canvas.discardActiveObject(); canvas.renderAll();
-            const dataURL = canvas.toDataURL({ format: 'png', quality: 1 });
+            canvas.discardActiveObject();
+            canvas.renderAll();
+
+            // ensure at least ~1600px wide export (looks great on phones & socials)
+            const MIN_EXPORT = 1600;
+            const mult = Math.max(2, Math.ceil(MIN_EXPORT / canvas.getWidth()));
+
+            const dataURL = canvas.toDataURL({
+                format: 'png',
+                multiplier: mult,          // <— hi-res export
+            });
+
             const fileNameBase = @json(\Illuminate\Support\Str::slug($event->name) ?: 'event');
             const a = document.createElement('a');
             a.href = dataURL;
@@ -335,7 +345,7 @@
             document.body.appendChild(a);
             a.click();
             a.remove();
-        });
+            });
     })();
     </script>
 </x-app-layout>
