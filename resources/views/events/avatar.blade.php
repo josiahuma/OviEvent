@@ -46,7 +46,7 @@
                     <div class="mb-3 text-sm text-gray-600">
                         Background is the event’s avatar. Your photo will start centered — drag to reposition or use the handles to resize.
                     </div>
-                    <div id="canvas-wrap" class="w-full overflow-auto rounded-xl border border-dashed border-gray-300 bg-gray-50 p-3">
+                    <div id="canvas-wrap" class="w-full overflow-hidden rounded-xl border border-dashed border-gray-300 bg-gray-50 p-3">
                         <canvas id="avatar-canvas"></canvas>
                     </div>
                 </div>
@@ -112,6 +112,20 @@
         #cropperModal .cropper-face  { background: transparent !important; display: block !important; }
 
     </style>
+    <style>
+    /* Let JS-set pixel sizes win; prevent any global scaling */
+        #avatar-canvas {
+            display: block;
+            max-width: none !important;
+            max-height: none !important;
+            width: auto !important;   /* do not force 100% */
+            height: auto !important;  /* let JS set explicit px height */
+        }
+
+        #canvas-wrap { overflow: hidden; }
+        #canvas-wrap canvas { display:block; }
+    </style>
+
 
     {{-- Libs BEFORE our custom script --}}
     <script src="https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js"></script>
@@ -127,46 +141,60 @@
             let userImgObj = null;   // your cropped circle the user adds
 
             // Fit the canvas to the wrapper and scale bg to fill it 1:1
-            function resizeCanvas() {
+           function resizeCanvas() {
                 if (!bgImg) return;
 
                 const wrap = document.getElementById('canvas-wrap');
-                // Available width (cap to something sensible so it doesn’t grow forever)
-                const wrapW = Math.max(280, Math.min(900, wrap.clientWidth || 0));
-                const ratio = bgImg.height / bgImg.width;
-                const cw = Math.round(wrapW);
-                const ch = Math.round(wrapW * ratio);
 
-                // iOS crispness: backstore pixels = css pixels * DPR, then zoom to DPR
+                // compute exact inner width (content box), avoid sub-pixel overflow by shaving 1px
+                const cs   = getComputedStyle(wrap);
+                const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+                const padY = parseFloat(cs.paddingTop)  + parseFloat(cs.paddingBottom);
+                const wrapW = wrap.getBoundingClientRect().width || 0;
+                const innerW = Math.max(260, Math.floor(wrapW - padX - 1)); // width we actually have
+
+                // keep the poster’s aspect ratio
+                const ratio = bgImg.height / bgImg.width;
+                const cw = innerW;
+                const ch = Math.round(cw * ratio);
+
+                // make the wrapper grow to fit the canvas height
+                wrap.style.height = `${ch + padY}px`;
+
+                // retina crispness
                 const dpr = Math.max(1, window.devicePixelRatio || 1);
 
-                // Set CSS size
+                // 1) CSS size (what the user sees)
                 canvas.setDimensions({ width: cw, height: ch }, { cssOnly: true });
-                // Set backing store size
+                const el = canvas.getElement();
+                el.style.width = `${cw}px`;
+                el.style.height = `${ch}px`;
+                el.style.maxWidth = 'none';
+                el.style.maxHeight = 'none';
+                el.style.display = 'block';
+
+                // 2) Backing store size (actual pixels)
                 canvas.setDimensions({ width: cw * dpr, height: ch * dpr }, { backstoreOnly: true });
                 canvas.setZoom(dpr);
 
-                // Scale bg to exactly fill canvas
-                const scaleX = cw / bgImg.width;
-                const scaleY = ch / bgImg.height;
-                canvas.setBackgroundImage(bgImg, canvas.requestRenderAll.bind(canvas), {
-                originX: 'left',
-                originY: 'top',
-                scaleX,
-                scaleY,
-                });
+                // 3) Scale background to exactly fill the canvas
+                const scale = cw / bgImg.width;
+                canvas.setBackgroundImage(
+                    bgImg,
+                    canvas.renderAll.bind(canvas),
+                    { left: 0, top: 0, originX: 'left', originY: 'top', scaleX: scale, scaleY: scale }
+                );
 
-                // Keep user photo centered after resizes (don’t change the user’s scale)
                 if (userImgObj) {
-                userImgObj.set({
-                    left: canvas.getWidth() / 2,
-                    top:  canvas.getHeight() / 2,
-                });
-                userImgObj.setCoords();
+                    userImgObj.set({ left: canvas.getWidth() / 2, top: canvas.getHeight() / 2 });
+                    userImgObj.setCoords();
                 }
 
                 canvas.requestRenderAll();
-            }
+                }
+
+
+
 
             // Throttled resize handler for rotation/viewport changes
             let rAF;
