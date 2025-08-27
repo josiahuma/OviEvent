@@ -108,18 +108,63 @@
             </div>
 
             <!-- Event Sessions -->
-            <div class="mb-4">
-                <label class="block text-gray-700 font-semibold">Event Sessions</label>
-                <div id="sessions-wrapper">
-                    <div class="flex gap-2 mb-2 session-item">
-                        <input type="text" name="sessions[0][name]" placeholder="Session Name" class="border p-2 rounded w-1/3" required>
-                        <input type="date" name="sessions[0][date]" class="border p-2 rounded w-1/3" required>
-                        <input type="time" name="sessions[0][time]" class="border p-2 rounded w-1/3" required>
-                        <button type="button" class="remove-session bg-red-500 text-white px-2 py-1 rounded">X</button>
+            <div class="mb-6">
+            <div class="mb-2">
+                <label class="block text-gray-800 font-semibold">Event sessions</label>
+                <p class="text-sm text-gray-500">
+                Add each date/time attendees can choose. You can add as many sessions as you need.
+                </p>
+            </div>
+
+            <div id="sessions-wrapper" class="space-y-4">
+                {{-- Session 1 (starter row) --}}
+                <div class="session-item rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h4 class="text-sm font-medium text-gray-700">Session 1</h4>
+                    <button type="button"
+                            class="remove-session text-sm text-rose-600 hover:text-rose-700 hidden">
+                    Remove
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                    <label class="block text-sm text-gray-700 mb-1">Title</label>
+                    <input type="text"
+                            name="sessions[0][name]"
+                            placeholder="e.g., Sunday Morning Service"
+                            class="w-full rounded-lg border-gray-300"
+                            required>
+                    <p class="mt-1 text-xs text-gray-500">What you call this session.</p>
+                    </div>
+
+                    <div>
+                    <label class="block text-sm text-gray-700 mb-1">Date</label>
+                    <input type="date"
+                            name="sessions[0][date]"
+                            class="w-full rounded-lg border-gray-300"
+                            required>
+                    <p class="mt-1 text-xs text-gray-500">The calendar date.</p>
+                    </div>
+
+                    <div>
+                    <label class="block text-sm text-gray-700 mb-1">Start time</label>
+                    <input type="time"
+                            name="sessions[0][time]"
+                            class="w-full rounded-lg border-gray-300"
+                            required>
+                    <p class="mt-1 text-xs text-gray-500">Local start time.</p>
                     </div>
                 </div>
-                <button type="button" id="add-session" class="mt-2 bg-blue-600 text-white px-4 py-2 rounded">+ Add Session</button>
+                </div>
             </div>
+
+            <button type="button" id="add-session"
+                    class="mt-3 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">
+                + Add another session
+            </button>
+            </div>
+
 
             <!-- Submit -->
             <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
@@ -130,25 +175,78 @@
 
     <script>
         // Sessions UI
-        let sessionIndex = 1;
-        document.getElementById('add-session').addEventListener('click', function() {
-            const wrapper = document.getElementById('sessions-wrapper');
-            const newSession = `
-                <div class="flex gap-2 mb-2 session-item">
-                    <input type="text" name="sessions[${sessionIndex}][name]" placeholder="e.g Sunday Session" class="border p-2 rounded w-1/3" required>
-                    <input type="date" name="sessions[${sessionIndex}][date]" class="border p-2 rounded w-1/3" required>
-                    <input type="time" name="sessions[${sessionIndex}][time]" class="border p-2 rounded w-1/3" required>
-                    <button type="button" class="remove-session bg-red-500 text-white px-2 py-1 rounded">X</button>
-                </div>`;
-            wrapper.insertAdjacentHTML('beforeend', newSession);
-            sessionIndex++;
-        });
+        (function () {
+            let sessionIndex = 1; // next numeric index for name="sessions[index][...]"
 
-        document.addEventListener('click', function(e) {
-            if (e.target.classList.contains('remove-session')) {
-                e.target.closest('.session-item').remove();
+            const wrapper = document.getElementById('sessions-wrapper');
+            const addBtn   = document.getElementById('add-session');
+
+            function renumber() {
+            const items = wrapper.querySelectorAll('.session-item');
+            items.forEach((el, i) => {
+                el.querySelector('h4').textContent = `Session ${i + 1}`;
+                const removeBtn = el.querySelector('.remove-session');
+                removeBtn.classList.toggle('hidden', items.length === 1);
+            });
             }
-        });
+
+            addBtn.addEventListener('click', () => {
+            const html = `
+                <div class="session-item rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h4 class="text-sm font-medium text-gray-700">Session</h4>
+                    <button type="button" class="remove-session text-sm text-rose-600 hover:text-rose-700">
+                    Remove
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                    <label class="block text-sm text-gray-700 mb-1">Title</label>
+                    <input type="text"
+                            name="sessions[${sessionIndex}][name]"
+                            placeholder="e.g., Sunday Morning Service"
+                            class="w-full rounded-lg border-gray-300"
+                            required>
+                    <p class="mt-1 text-xs text-gray-500">What you call this session.</p>
+                    </div>
+
+                    <div>
+                    <label class="block text-sm text-gray-700 mb-1">Date</label>
+                    <input type="date"
+                            name="sessions[${sessionIndex}][date]"
+                            class="w-full rounded-lg border-gray-300"
+                            required>
+                    <p class="mt-1 text-xs text-gray-500">The calendar date.</p>
+                    </div>
+
+                    <div>
+                    <label class="block text-sm text-gray-700 mb-1">Start time</label>
+                    <input type="time"
+                            name="sessions[${sessionIndex}][time]"
+                            class="w-full rounded-lg border-gray-300"
+                            required>
+                    <p class="mt-1 text-xs text-gray-500">Local start time.</p>
+                    </div>
+                </div>
+                </div>
+            `;
+            wrapper.insertAdjacentHTML('beforeend', html);
+            sessionIndex++;
+            renumber();
+            });
+
+            document.addEventListener('click', (e) => {
+            const btn = e.target.closest('.remove-session');
+            if (!btn) return;
+            const item = btn.closest('.session-item');
+            if (item) item.remove();
+            renumber();
+            });
+
+            // Initialize remove button visibility and headings
+            renumber();
+        })();
 
         // Tags (TomSelect)
         document.addEventListener("DOMContentLoaded", function () {
