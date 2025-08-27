@@ -304,6 +304,43 @@ class EventController extends Controller
 
         $event->save();
 
+        // --------- SESSION UPSERT/DELETE START ---------
+        $sessions = $request->input('sessions', []);
+        $touchedIds = [];
+
+        foreach ($sessions as $row) {
+            $name   = trim($row['name'] ?? '');
+            $date   = $row['date'] ?? null;
+            $time   = $row['time'] ?? null;
+            $delete = isset($row['_delete']) && (int)$row['_delete'] === 1;
+            $id     = $row['id'] ?? null;
+
+            $dt = null;
+            if ($date && $time) {
+                $dt = Carbon::parse("{$date} {$time}");
+            }
+
+            if ($id) {
+                $session = EventSession::where('event_id', $event->id)->where('id', $id)->first();
+                if (!$session) continue;
+
+                if ($delete) { $session->delete(); continue; }
+
+                $session->session_name = $name ?: $session->session_name;
+                if ($dt) $session->session_date = $dt;
+                $session->save();
+                $touchedIds[] = $session->id;
+            } else {
+                if ($delete || !$name || !$dt) continue;
+                $created = EventSession::create([
+                    'event_id'     => $event->id,
+                    'session_name' => $name,
+                    'session_date' => $dt,
+                ]);
+                $touchedIds[] = $created->id;
+            }
+        }
+
         return redirect()->route('dashboard')->with('success', 'Event updated successfully!');
     }
 

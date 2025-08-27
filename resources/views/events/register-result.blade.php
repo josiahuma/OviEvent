@@ -17,7 +17,7 @@
         </h2>
     </x-slot>
 
-    <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="max-w-3xl lg:max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="rounded-2xl border {{ $palette['bd'] }} {{ $palette['bg'] }} p-5 sm:p-6">
             <div class="flex items-start gap-3">
                 <div class="shrink-0">
@@ -52,6 +52,12 @@
             </div>
 
             <div class="mt-6 flex flex-col sm:flex-row gap-3">
+                @if ($event->avatar_url)
+                    <a href="{{ route('events.avatar', $event->id) }}"
+                        class="inline-flex justify-center items-center px-4 py-2.5 rounded-xl bg-amber-500 text-white font-medium hover:bg-amber-600 transition">
+                        Create Personal Display Picture
+                    </a>
+                @endif
                 <a href="{{ route('events.show', $event->id) }}"
                    class="inline-flex justify-center items-center px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700">
                     Back to event
