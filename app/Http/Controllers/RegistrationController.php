@@ -6,13 +6,16 @@ use App\Models\Event;
 use App\Models\EventRegistration;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Stripe\StripeClient;
 
 class RegistrationController extends Controller
 {
     // Show the registration form
     public function create($eventId)
     {
-        $event = Event::with(['sessions' => fn($q) => $q->orderBy('session_date', 'asc')])->findOrFail($eventId);
+        $event = Event::with(['sessions' => fn($q) => $q->orderBy('session_date', 'asc')])
+            ->findOrFail($eventId);
+
         return view('events.register', compact('event'));
     }
 
@@ -22,11 +25,11 @@ class RegistrationController extends Controller
         $event = Event::with('sessions')->findOrFail($eventId);
 
         $validated = $request->validate([
-            'name'         => 'required|string|max:255',
-            'email'        => 'required|email',
-            'mobile'       => 'nullable|string|max:30',
-            'session_ids'  => 'required|array|min:1',
-            'session_ids.*'=> 'integer|exists:event_sessions,id',
+            'name'          => 'required|string|max:255',
+            'email'         => 'required|email',
+            'mobile'        => 'nullable|string|max:30',
+            'session_ids'   => 'required|array|min:1',
+            'session_ids.*' => 'integer|exists:event_sessions,id',
         ]);
 
         // Only allow sessions that belong to this event
@@ -36,21 +39,23 @@ class RegistrationController extends Controller
             ->all();
 
         if (empty($validSessionIds)) {
-            return back()->withErrors(['session_ids' => 'Please select at least one valid session for this event.'])->withInput();
+            return back()
+                ->withErrors(['session_ids' => 'Please select at least one valid session for this event.'])
+                ->withInput();
         }
 
         // Prevent duplicate (same event) by user or email
         $already = EventRegistration::where('event_id', $event->id)
             ->where(function ($q) use ($validated) {
-                if (Auth::check()) {
-                    $q->orWhere('user_id', Auth::id());
-                }
+                if (Auth::check()) $q->orWhere('user_id', Auth::id());
                 $q->orWhere('email', $validated['email']);
             })
             ->exists();
 
         if ($already) {
-            return back()->withErrors(['email' => 'You are already registered for this event.'])->withInput();
+            return back()
+                ->withErrors(['email' => 'You are already registered for this event.'])
+                ->withInput();
         }
 
         $isPaid = ($event->ticket_cost ?? 0) > 0;
@@ -67,16 +72,18 @@ class RegistrationController extends Controller
 
         $registration->sessions()->sync($validSessionIds);
 
-        // Free events: done
-        if (!$isPaid) {
-            return redirect()->route('events.show', ['id' => $event->id, 'registered' => 1])
-                ->with('success', 'Registration confirmed. See you there!');
+        // ---- FREE EVENTS → go straight to the "result" page
+        if (! $isPaid) {
+            return redirect()->route('events.register.result', [
+                'id'         => $event->id,
+                'registered' => 1,  // query flag so the page knows what to show
+            ]);
         }
-        // Paid events: Stripe Checkout
-        // Ensure: composer require stripe/stripe-php
-        \Stripe\Stripe::setApiKey(config('services.stripe.secret'));
 
-        $session = \Stripe\Checkout\Session::create([
+        // ---- PAID EVENTS → Stripe Checkout
+        $stripe = new StripeClient(config('services.stripe.secret'));
+
+        $session = $stripe->checkout->sessions->create([
             'mode' => 'payment',
             'payment_method_types' => ['card'],
             'line_items' => [[
@@ -87,20 +94,80 @@ class RegistrationController extends Controller
                 ],
                 'quantity' => 1,
             ]],
-            'success_url' => route('events.show', $event->id) . '?paid=1&session_id={CHECKOUT_SESSION_ID}',
-            'cancel_url'  => route('events.register.create', $event->id) . '?canceled=1',
+            'success_url' => route('events.register.result', ['id' => $event->id]) . '?paid=1&session_id={CHECKOUT_SESSION_ID}',
+            'cancel_url'  => route('events.register.result', ['id' => $event->id]) . '?canceled=1',
             'metadata' => [
-                'event_id' => (string)$event->id,
-                'registration_id' => (string)$registration->id,
-                'session_ids' => implode(',', $validSessionIds),
-                'email' => $validated['email'],
-                'name' => $validated['name'],
-                'user_id' => (string)(Auth::id() ?? ''),
+                'event_id'        => (string) $event->id,
+                'registration_id' => (string) $registration->id,
+                'session_ids'     => implode(',', $validSessionIds),
+                'email'           => $validated['email'],
+                'name'            => $validated['name'],
+                'user_id'         => (string) (Auth::id() ?? ''),
             ],
         ]);
 
         $registration->update(['stripe_session_id' => $session->id]);
 
-        return redirect($session->url);
+        return redirect()->away($session->url);
+    }
+
+    // NEW: Result page (success/cancel/errors) – mobile friendly and reliable
+    public function result(Request $request, $eventId)
+    {
+        $event = Event::with('sessions')->findOrFail($eventId);
+
+        $state = 'info';     // success | error | warning | info
+        $title = 'Registration';
+        $message = null;
+
+        // 1) Canceled
+        if ($request->boolean('canceled')) {
+            $state = 'warning';
+            $title = 'Checkout cancelled';
+            $message = 'No payment was taken. You can try again when ready.';
+            return view('events.register-result', compact('event', 'state', 'title', 'message'));
+        }
+
+        // 2) Free registration success (no Stripe)
+        if ($request->boolean('registered')) {
+            $state = 'success';
+            $title = 'You’re registered! 🎉';
+            $message = 'We’ve saved your registration. See you there!';
+            return view('events.register-result', compact('event', 'state', 'title', 'message'));
+        }
+
+        // 3) Paid registration – verify Stripe session if present
+        if ($request->boolean('paid') && $request->filled('session_id')) {
+            try {
+                $stripe = new StripeClient(config('services.stripe.secret'));
+                $session = $stripe->checkout->sessions->retrieve($request->query('session_id'), []);
+
+                if ($session && $session->payment_status === 'paid') {
+                    // Mark registration paid (if we can find it)
+                    EventRegistration::where('stripe_session_id', $session->id)
+                        ->update(['status' => 'paid', 'amount' => (($session->amount_total ?? 0) / 100)]);
+
+                    $state = 'success';
+                    $title = 'Payment successful 🎉';
+                    $message = 'Your registration is confirmed.';
+                } else {
+                    $state = 'error';
+                    $title = 'We couldn’t verify your payment';
+                    $message = 'If you saw a Stripe success screen, you should be registered. Otherwise, please try again.';
+                }
+            } catch (\Throwable $e) {
+                $state = 'error';
+                $title = 'We couldn’t verify your payment';
+                $message = 'Please refresh in a moment or contact support if you were charged.';
+            }
+
+            return view('events.register-result', compact('event', 'state', 'title', 'message'));
+        }
+
+        // 4) Fallback – unknown state
+        $state = 'info';
+        $title = 'Status not clear';
+        $message = 'If you just completed checkout, please refresh in a moment.';
+        return view('events.register-result', compact('event', 'state', 'title', 'message'));
     }
 }

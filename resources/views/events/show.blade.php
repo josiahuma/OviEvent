@@ -1,18 +1,21 @@
 <x-app-layout>
     @php
-        // Build absolute image URL (banner preferred, fall back to avatar, then default)
-        $ogImage = null;
-        if (!empty($event->banner_url)) {
-            $ogImage = asset('storage/' . $event->banner_url);
-        } elseif (!empty($event->avatar_url)) {
-            $ogImage = asset('storage/' . $event->avatar_url);
-        } else {
-            $ogImage = asset('image/og-default.jpg');
-        }
+        // Choose OG image
+        $ogImage = $event->banner_url
+            ? asset('storage/' . $event->banner_url)
+            : ($event->avatar_url ? asset('storage/' . $event->avatar_url) : asset('images/og-default.jpg'));
 
         $ogTitle = $event->name;
         $plainDesc = trim(preg_replace('/\s+/', ' ', strip_tags($event->description ?? '')));
         $ogDesc = \Illuminate\Support\Str::limit($plainDesc ?: 'View event details and register.', 160, '…');
+
+        $image = $event->banner_url
+            ? asset('storage/' . $event->banner_url)
+            : ($event->avatar_url ? asset('storage/' . $event->avatar_url) : null);
+
+        $isFree     = ($event->ticket_cost ?? 0) == 0;
+        $priceLabel = $isFree ? 'Free' : '£' . number_format($event->ticket_cost, 2);
+        $tags       = is_array($event->tags) ? $event->tags : (json_decode($event->tags ?? '[]', true) ?: []);
     @endphp
 
     @section('title', $ogTitle)
@@ -25,54 +28,12 @@
         <meta property="og:url" content="{{ request()->fullUrl() }}">
         <meta property="og:image" content="{{ $ogImage }}">
         <meta property="og:image:secure_url" content="{{ $ogImage }}">
-        {{-- Optional (if you want) --}}
-        {{-- <meta property="og:image:width" content="1200">
-        <meta property="og:image:height" content="630"> --}}
-
         <meta name="twitter:card" content="summary_large_image">
         <meta name="twitter:title" content="{{ $ogTitle }}">
         <meta name="twitter:description" content="{{ $ogDesc }}">
         <meta name="twitter:image" content="{{ $ogImage }}">
     @parent
     @endsection
-    @php
-        $image = $event->banner_url
-            ? asset('storage/' . $event->banner_url)
-            : ($event->avatar_url ? asset('storage/' . $event->avatar_url) : null);
-
-        $isFree = ($event->ticket_cost ?? 0) == 0;
-        $priceLabel = $isFree ? 'Free' : '£' . number_format($event->ticket_cost, 2);
-        $tags = is_array($event->tags) ? $event->tags : (json_decode($event->tags ?? '[]', true) ?: []);
-    @endphp
-
-     {{-- FLASH ALERTS (outside any overflow-hidden containers) --}}
-    @if (session('success') || session('error') || request()->boolean('paid') || request()->boolean('canceled'))
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
-            @if (session('success'))
-                <div class="mb-4 p-3 rounded-lg bg-green-50 text-green-700 border border-green-200">
-                    {{ session('success') }}
-                </div>
-            @endif
-
-            @if (request()->boolean('paid'))
-                <div class="mb-4 p-3 rounded-lg bg-green-50 text-green-700 border border-green-200">
-                    Payment successful 🎉 Your registration is confirmed.
-                </div>
-            @endif
-
-            @if (session('error'))
-                <div class="mb-4 p-3 rounded-lg bg-red-50 text-red-700 border border-red-200">
-                    {{ session('error') }}
-                </div>
-            @endif
-
-            @if (request()->boolean('canceled'))
-                <div class="mb-4 p-3 rounded-lg bg-amber-50 text-amber-800 border border-amber-200">
-                    Checkout cancelled. You can try again below.
-                </div>
-            @endif
-        </div>
-    @endif
 
     {{-- Hero --}}
     <div class="w-full bg-white border-b border-gray-100">
@@ -81,10 +42,9 @@
                 @if ($image)
                     <img src="{{ $image }}" alt="{{ $event->name }}" class="w-full h-[320px] md:h-[420px] object-cover" loading="lazy" decoding="async">
                 @else
-                    <div class="w-full h-[320px] md:h-[420px] bg-gradient-to-br from-slate-200 to-slate-100" />
+                    <div class="w-full h-[320px] md:h-[420px] bg-gradient-to-br from-slate-200 to-slate-100"></div>
                 @endif
 
-                {{-- Top badges --}}
                 <div class="absolute top-4 left-4 flex flex-wrap gap-2">
                     @if ($event->category)
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-white/90 text-gray-800 shadow">
@@ -98,7 +58,6 @@
                     @endif
                 </div>
 
-                {{-- Price badge --}}
                 <div class="absolute top-4 right-4">
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold {{ $isFree ? 'bg-emerald-500' : 'bg-black/80' }} text-white shadow">
                         {{ $priceLabel }}
@@ -111,8 +70,7 @@
     {{-- Content --}}
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-            {{-- Left: details --}}
+            {{-- Left --}}
             <div class="lg:col-span-2 space-y-6">
                 <div>
                     <h1 class="text-3xl md:text-4xl font-bold text-gray-900">{{ $event->name }}</h1>
@@ -144,12 +102,8 @@
                                             <svg class="h-4 w-4 text-indigo-600" viewBox="0 0 24 24" fill="currentColor"><path d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a2 2 0 0 1 2 2v3H3V6a2 2 0 0 1 2-2h1V3a1 1 0 0 1 1-1z"/><path d="M3 10h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8z"/></svg>
                                         </div>
                                         <div>
-                                            <div class="text-sm font-medium text-gray-900">
-                                                {{ $s->session_name }}
-                                            </div>
-                                            <div class="text-sm text-gray-600">
-                                                {{ \Carbon\Carbon::parse($s->session_date)->format('D, d M Y · g:ia') }}
-                                            </div>
+                                            <div class="text-sm font-medium text-gray-900">{{ $s->session_name }}</div>
+                                            <div class="text-sm text-gray-600">{{ \Carbon\Carbon::parse($s->session_date)->format('D, d M Y · g:ia') }}</div>
                                         </div>
                                     </div>
                                     <a href="#" class="text-sm text-indigo-600 hover:text-indigo-700">Add to calendar</a>
@@ -184,7 +138,7 @@
                 @endif
             </div>
 
-            {{-- Right: sticky card / actions --}}
+            {{-- Right column --}}
             <div class="lg:col-span-1">
                 <div class="lg:sticky lg:top-6 space-y-6">
                     <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
@@ -213,19 +167,18 @@
                             </div>
                         </div>
 
-                        {{-- Primary CTA (wire this to your registration flow) --}}
                         <a href="{{ route('events.register.create', $event->id) }}"
                            class="mt-5 w-full inline-flex justify-center items-center px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition">
                             Register
                         </a>
+
                         @if ($event->avatar_url)
                             <a href="{{ route('events.avatar', $event->id) }}"
-                            class="mt-2 w-full inline-flex justify-center items-center px-4 py-2.5 rounded-xl bg-amber-500 text-white font-medium hover:bg-amber-600 transition">
+                               class="mt-2 w-full inline-flex justify-center items-center px-4 py-2.5 rounded-xl bg-amber-500 text-white font-medium hover:bg-amber-600 transition">
                                 Create Personal Display Picture
                             </a>
                         @endif
 
-                        {{-- Share --}}
                         <div class="mt-4 flex items-center gap-3">
                             <span class="text-xs text-gray-500">Share:</span>
                             <a class="text-gray-500 hover:text-gray-700" target="_blank"
@@ -237,7 +190,6 @@
                         </div>
                     </div>
 
-                    {{-- Small organizer card --}}
                     @if ($event->organizer)
                         <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
                             <div class="flex items-center gap-3">
@@ -249,7 +201,6 @@
                                     <div class="text-base font-medium text-gray-900">{{ $event->organizer }}</div>
                                 </div>
                             </div>
-                            {{-- You can add a 'Follow' button or link to more events by this organizer --}}
                         </div>
                     @endif
                 </div>

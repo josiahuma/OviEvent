@@ -40,6 +40,10 @@ Route::post('/stripe/webhook', [StripeWebhookController::class, 'handle'])
 Route::get('/how-it-works', [PageController::class, 'how'])->name('how');
 Route::get('/pricing', [PageController::class, 'pricing'])->name('pricing');
 
+// NEW: result page for success / cancel / errors
+Route::get('/events/{id}/register/result', [RegistrationController::class, 'result'])
+    ->name('events.register.result');
+
 // AUTH-only routes (manage your own events)
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
