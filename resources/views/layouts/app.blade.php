@@ -11,7 +11,7 @@
         @php
             $siteName   = config('app.name', 'ovievent');
             $baseUrl    = config('app.url') ?: url('/');
-            $defaultImg = asset('img/og-default.jpg');  {{-- put a 1200x630 image here --}}
+            $defaultImg = asset('images/og-default.jpg'); 
         @endphp
 
         @section('meta')
