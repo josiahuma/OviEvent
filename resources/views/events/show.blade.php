@@ -1,5 +1,5 @@
 <x-app-layout>
-        @php
+    @php
         // Build absolute image URL (banner preferred, fall back to avatar, then default)
         $ogImage = null;
         if (!empty($event->banner_url)) {
@@ -45,6 +45,17 @@
         $tags = is_array($event->tags) ? $event->tags : (json_decode($event->tags ?? '[]', true) ?: []);
     @endphp
 
+    @if (session('success'))
+        <div class="mb-4 p-3 rounded-lg bg-green-50 text-green-700 border border-green-200">
+            {{ session('success') }}
+        </div>
+    @endif
+
+    @if (session('error'))
+        <div class="mb-4 p-3 rounded-lg bg-red-50 text-red-700 border border-red-200">
+            {{ session('error') }}
+        </div>
+    @endif
 
     {{-- Hero --}}
     <div class="w-full bg-white border-b border-gray-100">

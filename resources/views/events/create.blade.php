@@ -135,7 +135,7 @@
             const wrapper = document.getElementById('sessions-wrapper');
             const newSession = `
                 <div class="flex gap-2 mb-2 session-item">
-                    <input type="text" name="sessions[${sessionIndex}][name]" placeholder="Session Name" class="border p-2 rounded w-1/3" required>
+                    <input type="text" name="sessions[${sessionIndex}][name]" placeholder="e.g Sunday Session" class="border p-2 rounded w-1/3" required>
                     <input type="date" name="sessions[${sessionIndex}][date]" class="border p-2 rounded w-1/3" required>
                     <input type="time" name="sessions[${sessionIndex}][time]" class="border p-2 rounded w-1/3" required>
                     <button type="button" class="remove-session bg-red-500 text-white px-2 py-1 rounded">X</button>
