@@ -45,23 +45,39 @@
         $tags = is_array($event->tags) ? $event->tags : (json_decode($event->tags ?? '[]', true) ?: []);
     @endphp
 
+     {{-- FLASH ALERTS (outside any overflow-hidden containers) --}}
+    @if (session('success') || session('error') || request()->boolean('paid') || request()->boolean('canceled'))
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+            @if (session('success'))
+                <div class="mb-4 p-3 rounded-lg bg-green-50 text-green-700 border border-green-200">
+                    {{ session('success') }}
+                </div>
+            @endif
+
+            @if (request()->boolean('paid'))
+                <div class="mb-4 p-3 rounded-lg bg-green-50 text-green-700 border border-green-200">
+                    Payment successful 🎉 Your registration is confirmed.
+                </div>
+            @endif
+
+            @if (session('error'))
+                <div class="mb-4 p-3 rounded-lg bg-red-50 text-red-700 border border-red-200">
+                    {{ session('error') }}
+                </div>
+            @endif
+
+            @if (request()->boolean('canceled'))
+                <div class="mb-4 p-3 rounded-lg bg-amber-50 text-amber-800 border border-amber-200">
+                    Checkout cancelled. You can try again below.
+                </div>
+            @endif
+        </div>
+    @endif
+
     {{-- Hero --}}
     <div class="w-full bg-white border-b border-gray-100">
         <div class="max-w-7xl mx-auto">
             <div class="relative rounded-b-2xl overflow-hidden">
-                @if (session('success'))
-                    <div class="mb-4 p-3 rounded-lg bg-green-50 text-green-700 border border-green-200">
-                        {{ session('success') }}
-                    </div>
-                @endif
-
-                @if (session('error'))
-                    <div class="mb-4 p-3 rounded-lg bg-red-50 text-red-700 border border-red-200">
-                        {{ session('error') }}
-                    </div>
-                @endif
-
-                {{-- Image --}}
                 @if ($image)
                     <img src="{{ $image }}" alt="{{ $event->name }}" class="w-full h-[320px] md:h-[420px] object-cover" loading="lazy" decoding="async">
                 @else
