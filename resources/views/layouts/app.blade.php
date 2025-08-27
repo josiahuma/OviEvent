@@ -40,6 +40,23 @@
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+        {{-- AlpineJS fallback (only loads if Alpine wasn’t started by your bundle) --}}
+        <script>
+            (function () {
+                function startIfReady(){ if (window.Alpine && !window.Alpine.versionStarted){ try{ window.Alpine.start(); window.Alpine.versionStarted = true; }catch(e){} } }
+                if (!window.Alpine) {
+                    var s = document.createElement('script');
+                    s.src = 'https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js';
+                    s.defer = true;
+                    s.onload = startIfReady;
+                    document.head.appendChild(s);
+                } else {
+                    startIfReady();
+                }
+            })();
+        </script>
+
     </head>
     <body class="font-sans antialiased">
         <div class="min-h-screen bg-gray-100">
@@ -61,7 +78,9 @@
                     x-cloak
                     x-show="show"
                     x-init="setTimeout(() => show = false, 6000)"
-                    class="fixed inset-x-4 top-16 sm:top-4 z-[10000] space-y-2 pointer-events-none"
+                    class="fixed left-4 right-4
+                        top-[calc(env(safe-area-inset-top)+64px)] sm:top-4
+                        z-[10000] space-y-2 pointer-events-none"
                     role="status"
                     aria-live="polite"
                 >
@@ -101,6 +120,7 @@
                     @endif
                 </div>
             @endif
+
 
 
 
