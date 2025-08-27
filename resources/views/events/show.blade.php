@@ -7,7 +7,7 @@
         } elseif (!empty($event->avatar_url)) {
             $ogImage = asset('storage/' . $event->avatar_url);
         } else {
-            $ogImage = asset('img/og-default.jpg');
+            $ogImage = asset('image/og-default.jpg');
         }
 
         $ogTitle = $event->name;
