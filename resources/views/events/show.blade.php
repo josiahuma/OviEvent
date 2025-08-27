@@ -1,4 +1,40 @@
 <x-app-layout>
+        @php
+        // Build absolute image URL (banner preferred, fall back to avatar, then default)
+        $ogImage = null;
+        if (!empty($event->banner_url)) {
+            $ogImage = asset('storage/' . $event->banner_url);
+        } elseif (!empty($event->avatar_url)) {
+            $ogImage = asset('storage/' . $event->avatar_url);
+        } else {
+            $ogImage = asset('img/og-default.jpg');
+        }
+
+        $ogTitle = $event->name;
+        $plainDesc = trim(preg_replace('/\s+/', ' ', strip_tags($event->description ?? '')));
+        $ogDesc = \Illuminate\Support\Str::limit($plainDesc ?: 'View event details and register.', 160, '…');
+    @endphp
+
+    @section('title', $ogTitle)
+
+    @section('meta')
+        <meta property="og:type" content="website">
+        <meta property="og:site_name" content="{{ config('app.name', 'ovievent') }}">
+        <meta property="og:title" content="{{ $ogTitle }}">
+        <meta property="og:description" content="{{ $ogDesc }}">
+        <meta property="og:url" content="{{ request()->fullUrl() }}">
+        <meta property="og:image" content="{{ $ogImage }}">
+        <meta property="og:image:secure_url" content="{{ $ogImage }}">
+        {{-- Optional (if you want) --}}
+        {{-- <meta property="og:image:width" content="1200">
+        <meta property="og:image:height" content="630"> --}}
+
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="{{ $ogTitle }}">
+        <meta name="twitter:description" content="{{ $ogDesc }}">
+        <meta name="twitter:image" content="{{ $ogImage }}">
+    @parent
+    @endsection
     @php
         $image = $event->banner_url
             ? asset('storage/' . $event->banner_url)
