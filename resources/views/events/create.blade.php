@@ -95,16 +95,22 @@
                 <input type="number" name="ticket_cost" step="0.01" class="w-full border rounded p-2">
             </div>
 
-            <!-- Event Avatar -->
-            <div class="mb-4">
-                <label class="block text-gray-700 font-semibold">Event Avatar</label>
-                <input type="file" name="avatar" class="w-full border rounded p-2">
-            </div>
-
             <!-- Event Banner -->
             <div class="mb-4">
-                <label class="block text-gray-700 font-semibold">Event Banner</label>
+                <label class="block text-gray-700 font-semibold">Event Banner (Required *) </label>
+                <p class="text-sm text-gray-500">
+                This image appears at the top of your event page. Recommended size: 1200x300 pixels (4:1 ratio).
+                </p>
                 <input type="file" name="banner" class="w-full border rounded p-2">
+            </div>
+
+            <!-- Event Avatar -->
+            <div class="mb-4">
+                <label class="block text-gray-700 font-semibold">Event Avatar (Optional) </label>
+                <p class="text-sm text-gray-500">
+                    This image is used by attendees to create personalised display picture of 'I will be attending'
+                </p>
+                <input type="file" name="avatar" class="w-full border rounded p-2">
             </div>
 
             <!-- Event Sessions -->
