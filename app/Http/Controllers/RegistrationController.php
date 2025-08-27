@@ -69,10 +69,9 @@ class RegistrationController extends Controller
 
         // Free events: done
         if (!$isPaid) {
-            return redirect()->route('events.show', $event->id)
+            return redirect()->route('events.show', ['id' => $event->id, 'registered' => 1])
                 ->with('success', 'Registration confirmed. See you there!');
         }
-
         // Paid events: Stripe Checkout
         // Ensure: composer require stripe/stripe-php
         \Stripe\Stripe::setApiKey(config('services.stripe.secret'));

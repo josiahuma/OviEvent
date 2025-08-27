@@ -35,6 +35,8 @@
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+        
+        <style>[x-cloak]{display:none!important}</style>
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -56,15 +58,23 @@
             @if (session('success') || session('error') || request()->boolean('paid') || request()->boolean('canceled') || request()->boolean('registered'))
                 <div
                     x-data="{ show: true }"
+                    x-cloak
                     x-show="show"
                     x-init="setTimeout(() => show = false, 6000)"
-                    class="fixed inset-x-4 top-[72px] sm:top-4 z-[10000] space-y-2 pointer-events-none"
+                    class="fixed inset-x-4 top-16 sm:top-4 z-[10000] space-y-2 pointer-events-none"
                     role="status"
                     aria-live="polite"
                 >
                     @if (session('success'))
                         <div class="pointer-events-auto rounded-lg border border-green-200 bg-green-50 text-green-800 shadow p-3 flex items-start justify-between gap-3">
                             <div class="text-sm font-medium">{{ session('success') }}</div>
+                            <button type="button" class="text-green-700 hover:text-green-900" @click="show = false" aria-label="Close">✕</button>
+                        </div>
+                    @endif
+
+                    @if (request()->boolean('registered'))
+                        <div class="pointer-events-auto rounded-lg border border-green-200 bg-green-50 text-green-800 shadow p-3 flex items-start justify-between gap-3">
+                            <div class="text-sm font-medium">Registration confirmed 🎉 See you there!</div>
                             <button type="button" class="text-green-700 hover:text-green-900" @click="show = false" aria-label="Close">✕</button>
                         </div>
                     @endif
@@ -91,6 +101,7 @@
                     @endif
                 </div>
             @endif
+
 
 
             <!-- Page Content -->
