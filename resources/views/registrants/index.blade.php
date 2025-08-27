@@ -25,7 +25,7 @@
         @endif
 
         {{-- Top KPI tiles --}}
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
             <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
                 <div class="text-sm text-gray-500">Total registrations</div>
                 <div class="mt-1 text-2xl font-semibold text-gray-900">{{ $event->registrations->count() }}</div>
@@ -36,13 +36,13 @@
                     £{{ number_format($sumMinor/100, 2) }}
                 </div>
             </div>
-            <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+            <!--<div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
                 <div class="text-sm text-gray-500">Payout (after 20%)</div>
                 <div class="mt-1 text-2xl font-semibold text-gray-900">
                     £{{ number_format($payoutMinor/100, 2) }}
                 </div>
-            </div>
-            <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex items-center justify-between">
+            </div>-->
+            <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
                 <div>
                     <div class="text-sm text-gray-500">Event type</div>
                     <div class="mt-1 inline-flex items-center px-2 py-0.5 rounded-full
@@ -50,21 +50,61 @@
                         {{ $isPaidEvent ? 'Paid event' : 'Free event' }}
                     </div>
                 </div>
-
-                @php
-                    $disableBtn = $payoutMinor <= 0 || !$isPaidEvent || $hasProcessingPayout;
-                @endphp
-
-                <form method="GET" action="{{ route('payouts.create', $event) }}">
-                    <input type="hidden" name="amount" value="{{ $payoutMinor }}">
-                    <button type="submit"
-                        class="inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium
-                               {{ $disableBtn ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700' }}"
-                        {{ $disableBtn ? 'disabled' : '' }}>
-                        Request payout
-                    </button>
-                </form>
             </div>
+            @php
+                $disablePayout = $payoutMinor <= 0 || !$isPaidEvent || $hasProcessingPayout;
+                $payoutTitle   = $hasProcessingPayout
+                    ? 'Payout request already processing'
+                    : (!$isPaidEvent ? 'Free events have no payouts'
+                    : ($payoutMinor <= 0 ? 'No payout available yet' : 'Request payout to your UK bank'));
+            @endphp
+
+            <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-sm text-gray-500">Actions</div>
+                        <div class="mt-1 text-xs text-gray-500">
+                            Available payout:
+                            <span class="font-medium text-gray-900">£{{ number_format($payoutMinor/100, 2) }}</span>
+                        </div>
+                    </div>
+
+                    @if($hasProcessingPayout)
+                        <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-100 text-amber-700 text-xs">
+                            <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-12.5a.75.75 0 00-1.5 0v4.19l-2.03 2.03a.75.75 0 101.06 1.06l2.22-2.22A.75.75 0 0010.75 10V5.5z" clip-rule="evenodd"/></svg>
+                            Processing
+                        </span>
+                    @endif
+                </div>
+
+                <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {{-- Email registrants --}}
+                    <a href="{{ route('events.registrants.email', $event->id) }}"
+                    class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M2.25 6.75A2.25 2.25 0 014.5 4.5h15a2.25 2.25 0 012.25 2.25v10.5A2.25 2.25 0 0119.5 19.5h-15A2.25 2.25 0 012.25 17.25V6.75zm2.72-.75l6.53 4.35a.75.75 0 00.8 0l6.53-4.35H4.97z"/>
+                        </svg>
+                        Email registrants
+                    </a>
+
+                    {{-- Request payout --}}
+                    <form method="GET" action="{{ route('payouts.create', $event) }}" class="w-full">
+                        <input type="hidden" name="amount" value="{{ $payoutMinor }}">
+                        <button type="submit" title="{{ $payoutTitle }}"
+                            class="inline-flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium
+                                {{ $disablePayout
+                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                        : 'bg-emerald-600 text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500' }}"
+                            {{ $disablePayout ? 'disabled aria-disabled=true' : '' }}>
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M3 7.5A2.25 2.25 0 015.25 5.25h13.5A2.25 2.25 0 0121 7.5v9a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 16.5v-9zM6 8.25a.75.75 0 000 1.5h12a.75.75 0 000-1.5H6zm0 4a.75.75 0 000 1.5h7.5a.75.75 0 000-1.5H6z"/>
+                            </svg>
+                            Request payout
+                        </button>
+                    </form>
+                </div>
+            </div>
+
         </div>
 
         {{-- Registrants list --}}

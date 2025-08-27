@@ -7,6 +7,8 @@ use App\Models\EventRegistration;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Stripe\StripeClient;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\RegistrationConfirmedMail;
 
 class RegistrationController extends Controller
 {
@@ -71,9 +73,16 @@ class RegistrationController extends Controller
         ]);
 
         $registration->sessions()->sync($validSessionIds);
+        // Notify organizer immediately about a new registration (free or paid-started)
+        if ($event->user?->email) {
+            Mail::to($event->user->email)->send(new NewRegistrationNotificationMail($event, $registration));
+        }
+
 
         // ---- FREE EVENTS → go straight to the "result" page
         if (! $isPaid) {
+            // FREE: attendee confirmation now
+            Mail::to($registration->email)->send(new RegistrationConfirmedMail($event, $registration));
             return redirect()->route('events.register.result', [
                 'id'         => $event->id,
                 'registered' => 1,  // query flag so the page knows what to show

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\RegistrationController;
+use App\Http\Controllers\RegistrantEmailController;
 use App\Http\Controllers\StripeWebhookController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -72,6 +73,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/payouts', [PayoutController::class, 'index'])->name('payouts.index');
     Route::get('/events/{event}/payouts/new', [PayoutController::class, 'create'])->name('payouts.create');
     Route::post('/events/{event}/payouts', [PayoutController::class, 'store'])->name('payouts.store');
+
+    // Email registrants
+    Route::get('/events/{event}/registrants/email', [RegistrantEmailController::class, 'create'])
+        ->name('events.registrants.email');
+    Route::post('/events/{event}/registrants/email', [RegistrantEmailController::class, 'send'])
+        ->name('events.registrants.email.send');
 });
 
 require __DIR__.'/auth.php';

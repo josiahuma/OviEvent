@@ -8,6 +8,8 @@ use App\Models\EventSession;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\EventCreatedMail;
 
 
 class EventController extends Controller
@@ -214,6 +216,7 @@ class EventController extends Controller
             }
         }
 
+        Mail::to(auth()->user()->email)->send(new EventCreatedMail($event));
         return redirect()->route('dashboard')->with('success', 'Event created successfully!');
     }
 
