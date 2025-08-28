@@ -82,14 +82,9 @@ class EventController extends Controller
 
         $now = Carbon::now();
 
-        // ---------- Featured (promoted OR free) + has a future session ----------
+        // --- Featured: ONLY promoted & with a future session ---
         $featuredIds = (clone $base)
-            ->where(function ($q) {
-                $q->where('is_promoted', true)
-                ->orWhere(function ($q2) {
-                    $q2->whereNull('ticket_cost')->orWhere('ticket_cost', 0);
-                });
-            })
+            ->where('is_promoted', true)
             ->whereHas('sessions', function ($q) use ($now) {
                 $q->where('session_date', '>=', $now);
             })
@@ -99,6 +94,17 @@ class EventController extends Controller
             ->whereIn('id', $featuredIds)
             ->orderBy('sessions_min_session_date', 'asc')
             ->paginate(8, ['*'], 'featured_page');
+
+        // --- Upcoming: future sessions, EXCLUDING featured to avoid dupes ---
+        $upcoming = (clone $base)
+            ->whereHas('sessions', function ($q) use ($now) {
+                $q->where('session_date', '>=', $now);
+            })
+            ->when($featuredIds->isNotEmpty(), function ($q) use ($featuredIds) {
+                $q->whereNotIn('id', $featuredIds);
+            })
+            ->orderBy('sessions_min_session_date', 'asc')
+            ->paginate(12, ['*'], 'upcoming_page');
 
         // ---------- Upcoming (future sessions) and NOT featured ----------
         $upcoming = (clone $base)
@@ -170,6 +176,8 @@ class EventController extends Controller
             'ticket_cost' => 'nullable|numeric|min:0',
             'avatar' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
             'banner' => 'nullable|image|mimes:jpg,jpeg,png|max:4096',
+            'is_promoted' => 'nullable|boolean',
+            // Sessions will be validated separately
             'sessions.*.name' => 'required|string|max:255',
             'sessions.*.date' => 'required|date',
             'sessions.*.time' => 'required',
@@ -204,6 +212,7 @@ class EventController extends Controller
             'ticket_cost' => $validated['ticket_cost'] ?? 0,
             'avatar_url' => $avatarUrl,
             'banner_url' => $bannerUrl,
+            'is_promoted' => $validated['is_promoted'] ?? false,
         ]);
 
         // Store sessions

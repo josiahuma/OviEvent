@@ -22,7 +22,7 @@
 
     $isFree = ($event->ticket_cost ?? 0) == 0;
     $priceLabel = $isFree ? 'Free' : '£' . number_format($event->ticket_cost, 2);
-    $isFeatured = ($forceFeatured ?? false) || $isFree || ($event->is_promoted ?? false);
+    $isFeatured = ($forceFeatured ?? false) || ($event->is_promoted ?? false);
 @endphp
 
 <a href="{{ route('events.show', $event->id) }}"
