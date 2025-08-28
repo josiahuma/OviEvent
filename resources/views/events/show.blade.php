@@ -1,41 +1,39 @@
 <x-app-layout>
     @php
-    // Build a secure absolute URL for the OG image (required by FB/Twitter)
-    $ogPath = $event->banner_url ?: ($event->avatar_url ?: null);
+        // Choose OG image
+        $ogImage = $event->banner_url
+            ? asset('storage/' . $event->banner_url)
+            : ($event->avatar_url ? asset('storage/' . $event->avatar_url) : asset('images/og-default.jpg'));
 
-    // If coming from the "public" disk, Storage::url() returns "/storage/…"
-    // Wrap with secure_url() so it becomes "https://your-domain/storage/…"
-    $ogImage = $ogPath
-        ? secure_url(\Illuminate\Support\Facades\Storage::disk('public')->url($ogPath))
-        : secure_asset('images/og-default.jpg'); // make sure this file exists in /public/images
+        $ogTitle = $event->name;
+        $plainDesc = trim(preg_replace('/\s+/', ' ', strip_tags($event->description ?? '')));
+        $ogDesc = \Illuminate\Support\Str::limit($plainDesc ?: 'View event details and register.', 160, '…');
 
-    $ogTitle = $event->name;
-    $plainDesc = trim(preg_replace('/\s+/', ' ', strip_tags($event->description ?? '')));
-    $ogDesc = \Illuminate\Support\Str::limit($plainDesc ?: 'View event details and register.', 160, '…');
+        $image = $event->banner_url
+            ? asset('storage/' . $event->banner_url)
+            : ($event->avatar_url ? asset('storage/' . $event->avatar_url) : null);
+
+        $isFree     = ($event->ticket_cost ?? 0) == 0;
+        $priceLabel = $isFree ? 'Free' : '£' . number_format($event->ticket_cost, 2);
+        $tags       = is_array($event->tags) ? $event->tags : (json_decode($event->tags ?? '[]', true) ?: []);
     @endphp
 
     @section('title', $ogTitle)
 
     @section('meta')
-        <meta property="og:type" content="article">
+        <meta property="og:type" content="website">
         <meta property="og:site_name" content="{{ config('app.name', 'ovievent') }}">
         <meta property="og:title" content="{{ $ogTitle }}">
         <meta property="og:description" content="{{ $ogDesc }}">
-        <meta property="og:url" content="{{ secure_url(request()->path()) }}">
-
+        <meta property="og:url" content="{{ request()->fullUrl() }}">
         <meta property="og:image" content="{{ $ogImage }}">
         <meta property="og:image:secure_url" content="{{ $ogImage }}">
-        <meta property="og:image:alt" content="{{ $ogTitle }}">
-        <meta property="og:image:width" content="1200">
-        <meta property="og:image:height" content="630">
-
         <meta name="twitter:card" content="summary_large_image">
         <meta name="twitter:title" content="{{ $ogTitle }}">
         <meta name="twitter:description" content="{{ $ogDesc }}">
         <meta name="twitter:image" content="{{ $ogImage }}">
     @parent
     @endsection
-
 
     {{-- Hero --}}
     <div class="w-full bg-white border-b border-gray-100">
