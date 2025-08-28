@@ -7,7 +7,7 @@
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
                 Create Display Picture — {{ $event->name }}
             </h2>
-            <a href="{{ route('events.show', $event->id) }}"
+            <a href="{{ route('events.show', $event) }}"
                class="text-sm text-gray-600 hover:text-gray-800 underline">Back to event</a>
         </div>
     </x-slot>

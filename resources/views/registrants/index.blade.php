@@ -36,12 +36,6 @@
                     £{{ number_format($sumMinor/100, 2) }}
                 </div>
             </div>
-            <!--<div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-                <div class="text-sm text-gray-500">Payout (after 20%)</div>
-                <div class="mt-1 text-2xl font-semibold text-gray-900">
-                    £{{ number_format($payoutMinor/100, 2) }}
-                </div>
-            </div>-->
             <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
                 <div>
                     <div class="text-sm text-gray-500">Event type</div>
@@ -79,8 +73,8 @@
 
                 <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {{-- Email registrants --}}
-                    <a href="{{ route('events.registrants.email', $event->id) }}"
-                    class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <a href="{{ route('events.registrants.email', $event) }}"
+                       class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M2.25 6.75A2.25 2.25 0 014.5 4.5h15a2.25 2.25 0 012.25 2.25v10.5A2.25 2.25 0 0119.5 19.5h-15A2.25 2.25 0 012.25 17.25V6.75zm2.72-.75l6.53 4.35a.75.75 0 00.8 0l6.53-4.35H4.97z"/>
                         </svg>

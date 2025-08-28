@@ -4,7 +4,7 @@
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
                 Email registrants — {{ $event->name }}
             </h2>
-            <a href="{{ route('events.registrants', $event->id) }}" class="text-sm text-gray-600 hover:text-gray-800 underline">
+            <a href="{{ route('events.registrants', $event) }}" class="text-sm text-gray-600 hover:text-gray-800 underline">
                 Back to registrants
             </a>
         </div>
@@ -32,7 +32,7 @@
         <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
             <p class="text-sm text-gray-600 mb-4">Sending to <strong>{{ $count }}</strong> registrant{{ $count===1?'':'s' }}.</p>
 
-            <form method="POST" action="{{ route('events.registrants.email.send', $event->id) }}">
+            <form method="POST" action="{{ route('events.registrants.email.send', $event) }}">
                 @csrf
                 <div class="space-y-4">
                     <div>
@@ -47,7 +47,7 @@
                 </div>
 
                 <div class="mt-5 flex items-center justify-end gap-3">
-                    <a href="{{ route('events.registrants', $event->id) }}" class="text-sm text-gray-600 hover:text-gray-800">Cancel</a>
+                    <a href="{{ route('events.registrants', $event) }}" class="text-sm text-gray-600 hover:text-gray-800">Cancel</a>
                     <button type="submit" class="inline-flex items-center px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700">
                         Send email
                     </button>

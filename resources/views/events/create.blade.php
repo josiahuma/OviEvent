@@ -50,7 +50,7 @@
                     <option value="Music">Music</option>
                     <option value="Religion">Religion</option>
                     <option value="Sports">Sports</option>
-                    <option value="Technology">Techology</option>
+                    <option value="Technology">Technology</option>
                     <option value="Travel">Travel</option>
                 </select>
             </div>

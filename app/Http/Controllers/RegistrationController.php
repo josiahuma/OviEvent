@@ -2,29 +2,28 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\RegistrationConfirmedMail;
+use App\Mail\NewRegistrationNotificationMail;
 use App\Models\Event;
 use App\Models\EventRegistration;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Stripe\StripeClient;
 use Illuminate\Support\Facades\Mail;
-use App\Mail\RegistrationConfirmedMail;
+use Stripe\StripeClient;
 
 class RegistrationController extends Controller
 {
     // Show the registration form
-    public function create($eventId)
+    public function create(Event $event)
     {
-        $event = Event::with(['sessions' => fn($q) => $q->orderBy('session_date', 'asc')])
-            ->findOrFail($eventId);
-
+        $event->load(['sessions' => fn ($q) => $q->orderBy('session_date', 'asc')]);
         return view('events.register', compact('event'));
     }
 
     // Handle registration (free or paid → Stripe)
-    public function store(Request $request, $eventId)
+    public function store(Request $request, Event $event)
     {
-        $event = Event::with('sessions')->findOrFail($eventId);
+        $event->load('sessions');
 
         $validated = $request->validate([
             'name'          => 'required|string|max:255',
@@ -73,20 +72,24 @@ class RegistrationController extends Controller
         ]);
 
         $registration->sessions()->sync($validSessionIds);
-        // Notify organizer immediately about a new registration (free or paid-started)
-        if ($event->user?->email) {
-            Mail::to($event->user->email)->send(new NewRegistrationNotificationMail($event, $registration));
-        }
 
+        // Notify organizer (free or paid attempt)
+        if ($event->user?->email) {
+            Mail::to($event->user->email)->send(
+                new NewRegistrationNotificationMail($event, $registration)
+            );
+        }
 
         // ---- FREE EVENTS → go straight to the "result" page
         if (! $isPaid) {
-            // FREE: attendee confirmation now
-            Mail::to($registration->email)->send(new RegistrationConfirmedMail($event, $registration));
-            return redirect()->route('events.register.result', [
-                'id'         => $event->id,
-                'registered' => 1,  // query flag so the page knows what to show
-            ]);
+            Mail::to($registration->email)->send(
+                new RegistrationConfirmedMail($event, $registration)
+            );
+
+            // pass *model* for route + add query flag
+            return redirect()->to(
+                route('events.register.result', ['event' => $event, 'registered' => 1])
+            );
         }
 
         // ---- PAID EVENTS → Stripe Checkout
@@ -103,10 +106,11 @@ class RegistrationController extends Controller
                 ],
                 'quantity' => 1,
             ]],
-            'success_url' => route('events.register.result', ['id' => $event->id]) . '?paid=1&session_id={CHECKOUT_SESSION_ID}',
-            'cancel_url'  => route('events.register.result', ['id' => $event->id]) . '?canceled=1',
+            // pass *model* for route, append query flags
+            'success_url' => route('events.register.result', ['event' => $event, 'paid' => 1]) . '&session_id={CHECKOUT_SESSION_ID}',
+            'cancel_url'  => route('events.register.result', ['event' => $event, 'canceled' => 1]),
             'metadata' => [
-                'event_id'        => (string) $event->id,
+                'event_id'        => (string) $event->id,            // keep internal numeric id for DB joins
                 'registration_id' => (string) $registration->id,
                 'session_ids'     => implode(',', $validSessionIds),
                 'email'           => $validated['email'],
@@ -120,10 +124,10 @@ class RegistrationController extends Controller
         return redirect()->away($session->url);
     }
 
-    // NEW: Result page (success/cancel/errors) – mobile friendly and reliable
-    public function result(Request $request, $eventId)
+    // NEW: Result page (success/cancel/errors)
+    public function result(Request $request, Event $event)
     {
-        $event = Event::with('sessions')->findOrFail($eventId);
+        $event->load('sessions');
 
         $state = 'info';     // success | error | warning | info
         $title = 'Registration';
@@ -137,7 +141,7 @@ class RegistrationController extends Controller
             return view('events.register-result', compact('event', 'state', 'title', 'message'));
         }
 
-        // 2) Free registration success (no Stripe)
+        // 2) Free registration success
         if ($request->boolean('registered')) {
             $state = 'success';
             $title = 'You’re registered! 🎉';
@@ -148,13 +152,15 @@ class RegistrationController extends Controller
         // 3) Paid registration – verify Stripe session if present
         if ($request->boolean('paid') && $request->filled('session_id')) {
             try {
-                $stripe = new StripeClient(config('services.stripe.secret'));
+                $stripe  = new StripeClient(config('services.stripe.secret'));
                 $session = $stripe->checkout->sessions->retrieve($request->query('session_id'), []);
 
                 if ($session && $session->payment_status === 'paid') {
-                    // Mark registration paid (if we can find it)
                     EventRegistration::where('stripe_session_id', $session->id)
-                        ->update(['status' => 'paid', 'amount' => (($session->amount_total ?? 0) / 100)]);
+                        ->update([
+                            'status' => 'paid',
+                            'amount' => (($session->amount_total ?? 0) / 100),
+                        ]);
 
                     $state = 'success';
                     $title = 'Payment successful 🎉';
@@ -173,7 +179,7 @@ class RegistrationController extends Controller
             return view('events.register-result', compact('event', 'state', 'title', 'message'));
         }
 
-        // 4) Fallback – unknown state
+        // 4) Fallback
         $state = 'info';
         $title = 'Status not clear';
         $message = 'If you just completed checkout, please refresh in a moment.';

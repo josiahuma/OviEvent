@@ -30,21 +30,32 @@
                 @endif
             </div>
 
-            <form action="{{ route('events.register.store', $event->id) }}" method="POST" class="mt-6">
+            {{-- use model binding (public_id) --}}
+            <form action="{{ route('events.register.store', $event) }}" method="POST" class="mt-6">
                 @csrf
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Full name</label>
-                        <input type="text" name="name" value="{{ old('name', auth()->user()->name ?? '') }}"
-                               class="mt-1 w-full rounded-lg border-gray-300" required>
+                        <input
+                            type="text"
+                            name="name"
+                            value="{{ old('name', optional(auth()->user())->name) }}"
+                            class="mt-1 w-full rounded-lg border-gray-300"
+                            required
+                        >
                         @error('name') <p class="text-sm text-red-600 mt-1">{{ $message }}</p> @enderror
                     </div>
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Email</label>
-                        <input type="email" name="email" value="{{ old('email', auth()->user()->email ?? '') }}"
-                               class="mt-1 w-full rounded-lg border-gray-300" required>
+                        <input
+                            type="email"
+                            name="email"
+                            value="{{ old('email', optional(auth()->user())->email) }}"
+                            class="mt-1 w-full rounded-lg border-gray-300"
+                            required
+                        >
                         @error('email') <p class="text-sm text-red-600 mt-1">{{ $message }}</p> @enderror
                     </div>
 
@@ -61,12 +72,18 @@
                     <div class="mt-2 space-y-2">
                         @forelse ($event->sessions as $s)
                             <label class="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50">
-                                <input type="checkbox" name="session_ids[]" value="{{ $s->id }}"
-                                       class="h-4 w-4 rounded border-gray-300"
-                                       @checked(in_array($s->id, old('session_ids', [])))>
+                                <input
+                                    type="checkbox"
+                                    name="session_ids[]"
+                                    value="{{ $s->id }}"
+                                    class="h-4 w-4 rounded border-gray-300"
+                                    @checked(in_array($s->id, old('session_ids', [])))
+                                >
                                 <div>
                                     <div class="text-sm font-medium text-gray-900">{{ $s->session_name }}</div>
-                                    <div class="text-sm text-gray-600">{{ \Carbon\Carbon::parse($s->session_date)->format('D, d M Y · g:ia') }}</div>
+                                    <div class="text-sm text-gray-600">
+                                        {{ \Carbon\Carbon::parse($s->session_date)->format('D, d M Y · g:ia') }}
+                                    </div>
                                 </div>
                             </label>
                         @empty
@@ -77,7 +94,7 @@
                 </div>
 
                 <div class="mt-6 flex items-center justify-end gap-3">
-                    <a href="{{ route('events.show', $event->id) }}" class="text-sm text-gray-600 hover:text-gray-800">Cancel</a>
+                    <a href="{{ route('events.show', $event) }}" class="text-sm text-gray-600 hover:text-gray-800">Cancel</a>
                     <button type="submit"
                             class="inline-flex items-center px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition">
                         {{ ($event->ticket_cost ?? 0) > 0 ? 'Proceed to Payment' : 'Register' }}

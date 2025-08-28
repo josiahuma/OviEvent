@@ -9,50 +9,44 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\RegistrantsController;
 use App\Http\Controllers\PayoutController;
+use App\Models\Event as EventModel; // 👈 alias the Eloquent model
 
+/**
+ * Legacy numeric ID redirect (301).
+ * Works for /events/14, /events/14/register, /events/14/avatar, etc.
+ * Preserves any query string.
+ */
+// --- Legacy numeric ID redirect (must stay ABOVE other /events/* routes) ---
+Route::get('/events/{id}/{tail?}', function (int $id, $tail = null) {
+    $event = EventModel::query()->select('public_id')->find($id); // 👈 use EventModel
+    abort_unless($event && $event->public_id, 404);
+
+    $base = '/events/'.$event->public_id.($tail ? '/'.$tail : '');
+    $qs   = request()->getQueryString();
+
+    return redirect($base.($qs ? '?'.$qs : ''), 301);
+})->whereNumber('id')->where('tail', '.*');
 
 // Homepage - public listing
 Route::get('/', [EventController::class, 'publicIndex'])->name('homepage');
-
-// PUBLIC event pages (numeric IDs only)
-Route::get('/events/{id}', [EventController::class, 'show'])
-    ->whereNumber('id')
-    ->name('events.show');
-
-Route::get('/events/{id}/avatar', [EventController::class, 'avatar'])
-    ->whereNumber('id')
-    ->name('events.avatar');
-
-// PUBLIC registration routes
-Route::get('/events/{id}/register', [RegistrationController::class, 'create'])
-    ->whereNumber('id')
-    ->name('events.register.create');
-
-Route::post('/events/{id}/register', [RegistrationController::class, 'store'])
-    ->whereNumber('id')
-    ->name('events.register.store');
-
-// Stripe webhook
-Route::post('/stripe/webhook', [StripeWebhookController::class, 'handle'])
-    ->name('stripe.webhook');
-
 
 // Marketing pages
 Route::get('/how-it-works', [PageController::class, 'how'])->name('how');
 Route::get('/pricing', [PageController::class, 'pricing'])->name('pricing');
 
-// NEW: result page for success / cancel / errors
-Route::get('/events/{id}/register/result', [RegistrationController::class, 'result'])
-    ->name('events.register.result');
+// Stripe webhook
+Route::post('/stripe/webhook', [StripeWebhookController::class, 'handle'])
+    ->name('stripe.webhook');
 
 // AUTH-only routes (manage your own events)
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
     Route::get('/dashboard', [EventController::class, 'dashboard'])->name('dashboard');
-    // Generate /events, /events/create, /events (POST), /events/{event}/edit, etc.
-    // Exclude 'show' so it doesn't clash with the public show route above.
+
+    // Resource CRUD (excludes show so it won't clash with public show)
     Route::resource('events', EventController::class)->except(['show']);
 
     // View registrants (organizer)
@@ -80,5 +74,24 @@ Route::middleware('auth')->group(function () {
     Route::post('/events/{event}/registrants/email', [RegistrantEmailController::class, 'send'])
         ->name('events.registrants.email.send');
 });
+
+// PUBLIC registration + avatar (these don't clash with /events/create)
+Route::get('/events/{event}/avatar', [EventController::class, 'avatar'])
+    ->name('events.avatar');
+
+Route::get('/events/{event}/register', [RegistrationController::class, 'create'])
+    ->name('events.register.create');
+
+Route::post('/events/{event}/register', [RegistrationController::class, 'store'])
+    ->name('events.register.store');
+
+Route::get('/events/{event}/register/result', [RegistrationController::class, 'result'])
+    ->name('events.register.result');
+
+// PUBLIC show route — put AFTER resource routes so it doesn't catch /events/create
+// Also guard against the reserved word "create" just in case.
+Route::get('/events/{event}', [EventController::class, 'show'])
+    ->where('event', '^(?!create$).+')
+    ->name('events.show');
 
 require __DIR__.'/auth.php';

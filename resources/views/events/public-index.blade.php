@@ -55,8 +55,17 @@
                 @if($q)
                     <div class="mt-2 text-white/90 text-sm">
                         Showing results for: <span class="font-medium">“{{ $q }}”</span>
-                        <a href="{{ route('homepage', array_filter(['category'=>$category,'price'=>$price,'start_date'=>$startDate,'end_date'=>$endDate])) }}"
-                           class="underline ml-2">Clear search</a>
+                        <a href="{{ route('homepage', collect([
+                            'category'   => $category,
+                            'price'      => $price,
+                            'start_date' => $startDate,
+                            'end_date'   => $endDate,
+                        ])->filter(fn($v) => filled($v))->all()) }}"
+                        class="underline ml-2"
+                        >
+                        Clear search
+                        </a>
+
                     </div>
                 @endif
             </div>
@@ -152,7 +161,7 @@
                 </div>
 
                 <div class="mt-6">
-                    {{ $featured->withQueryString()->links() }}
+                    {{ $featured->withQueryString()->links('pagination::tailwind', ['paginator' => $featured]) }}
                 </div>
             </section>
         @endif

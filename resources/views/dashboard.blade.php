@@ -27,7 +27,6 @@
 
                         $nextDate = $event->sessions_min_session_date ?? null;
 
-                        // robust tags parsing (optional to show)
                         $raw = $event->tags;
                         $tags = [];
                         if (is_array($raw)) {
@@ -107,12 +106,13 @@
 
                             <div class="mt-4 flex items-center justify-between">
                                  <div class="flex items-center gap-2">
-                                    <a href="{{ route('events.show', $event->id) }}"
-                                    class="inline-flex items-center px-3 py-1.5 text-sm rounded-md bg-gray-100 hover:bg-gray-200 text-gray-800">
+                                    {{-- CHANGED: use implicit binding so URL uses public_id --}}
+                                    <a href="{{ route('events.show', $event) }}"
+                                       class="inline-flex items-center px-3 py-1.5 text-sm rounded-md bg-gray-100 hover:bg-gray-200 text-gray-800">
                                         View
                                     </a>
                                     <a href="{{ route('events.edit', $event) }}"
-                                    class="inline-flex items-center px-3 py-1.5 text-sm rounded-md bg-indigo-600 hover:bg-indigo-700 text-white">
+                                       class="inline-flex items-center px-3 py-1.5 text-sm rounded-md bg-indigo-600 hover:bg-indigo-700 text-white">
                                         Edit
                                     </a>
                                 </div>
@@ -124,16 +124,14 @@
                                 @endphp
 
                                 @if(!$isFree || $isUnlocked)
-                                    {{-- Paid event or unlocked free event --}}
                                     <a href="{{ route('events.registrants', $event) }}"
-                                    class="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md bg-emerald-600 text-white hover:bg-emerald-700">
+                                       class="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md bg-emerald-600 text-white hover:bg-emerald-700">
                                         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a5 5 0 00-5 5v2H6a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2v-8a2 2 0 00-2-2h-1V7a5 5 0 00-5-5zm-3 7V7a3 3 0 016 0v2H9z"/></svg>
                                         View registrants
                                     </a>
                                 @else
-                                    {{-- Free event & not unlocked: show "locked" variant that goes to unlock page --}}
                                     <a href="{{ route('events.registrants.unlock', $event) }}"
-                                    class="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200">
+                                       class="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200">
                                         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a4 4 0 00-4 4v2H7a2 2 0 00-2 2v9a2 2 0 002 2h10a2 2 0 002-2v-9a2 2 0 00-2-2h-1V6a4 4 0 00-8 0v2h2V6a2 2 0 114 0v2h-4z"/></svg>
                                         View registrants
                                     </a>
@@ -146,7 +144,6 @@
                                         Delete
                                     </button>
 
-                                    {{-- Confirm dropdown --}}
                                     <div x-show="open" @click.outside="open=false" x-cloak
                                          class="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-10">
                                         <p class="text-sm text-gray-700">Delete this event? This action cannot be undone.</p>

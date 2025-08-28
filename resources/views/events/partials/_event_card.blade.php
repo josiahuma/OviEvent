@@ -22,10 +22,12 @@
 
     $isFree = ($event->ticket_cost ?? 0) == 0;
     $priceLabel = $isFree ? 'Free' : '£' . number_format($event->ticket_cost, 2);
+
+    // Featured ONLY if forced or explicitly promoted
     $isFeatured = ($forceFeatured ?? false) || ($event->is_promoted ?? false);
 @endphp
 
-<a href="{{ route('events.show', $event->id) }}"
+<a href="{{ route('events.show', $event) }}"
    class="group block bg-white rounded-2xl overflow-hidden shadow-sm ring-1 ring-gray-200 hover:shadow-lg hover:ring-gray-300 transition-all duration-200 relative">
 
     {{-- In-bounds featured pill (no clipping/flicker) --}}

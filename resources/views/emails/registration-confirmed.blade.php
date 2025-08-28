@@ -1,6 +1,24 @@
-<p>Hi {{ $registration->name }},</p>
+<p>Hi {{ $registration->name ?? 'there' }},</p>
+
 <p>Your registration for <strong>{{ $event->name }}</strong> is confirmed.</p>
-@if($event->sessions->count())
-<p>Sessions: {{ $event->sessions->pluck('session_name')->join(', ') }}</p>
+
+@php
+    // Ensure we show the registrant's selected sessions
+    $chosen = $registration->relationLoaded('sessions')
+        ? $registration->sessions
+        : $registration->sessions()->get();
+@endphp
+
+@if($chosen->count())
+    <p>
+        Sessions:
+        {{ $chosen->sortBy('session_date')->map(function ($s) {
+            return $s->session_name.' ('.\Carbon\Carbon::parse($s->session_date)->format('D, d M Y · g:ia').')';
+        })->join(', ') }}
+    </p>
 @endif
-<p>See event: {{ route('events.show', $event->id) }}</p>
+
+<p>
+    See event:
+    <a href="{{ route('events.show', $event) }}">{{ route('events.show', $event) }}</a>
+</p>

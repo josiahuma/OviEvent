@@ -11,7 +11,7 @@ use Stripe\StripeClient;
 
 class RegistrantsController extends Controller
 {
-    private int $unlockAmount = 900; // £9.00 to unlock free-event registrants
+    private int $unlockAmount = 900; // £9.00 to unlock free-event registrants (minor units)
     private string $currency = 'gbp';
 
     public function index(Event $event)
@@ -27,6 +27,7 @@ class RegistrantsController extends Controller
             ->exists();
 
         if (!$isPaidEvent && !$isUnlocked) {
+            // pass the *model* so route uses public_id
             return redirect()->route('events.registrants.unlock', $event)
                 ->with('error', 'Unlock registrant details for this free event.');
         }
@@ -34,60 +35,41 @@ class RegistrantsController extends Controller
         // Load registrations & sessions
         $event->load(['registrations.sessions' => fn ($q) => $q->orderBy('session_date')]);
 
-        /**
-         * ---------- Earnings math ----------
-         * Your registrations table has:
-         *  - status: 'paid' | 'free'
-         *  - amount: decimal in MAJOR units (e.g. 10.00)
-         *  - stripe_session_id: set when a checkout session exists
-         *
-         * We’ll treat a registration as paid when:
-         *  - status is 'paid' (case-insensitive), OR
-         *  - stripe_session_id is present (fallback; comment out if you only trust 'paid')
-         */
+        // Earnings math (minor units)
         $paidRegs = $event->registrations->filter(function ($r) use ($event) {
-            if (($event->ticket_cost ?? 0) <= 0) return false; // free events earn 0
+            if (($event->ticket_cost ?? 0) <= 0) return false;
 
             $status = isset($r->status) ? strtolower((string) $r->status) : null;
-
             if ($status === 'paid') return true;
 
-            // Optional fallback: if a session exists, consider paid.
-            // If you only want to trust 'paid', comment the line below.
+            // Optional fallback — treat having a Stripe session as paid
             if (!empty($r->stripe_session_id)) return true;
 
             return false;
         });
 
-        /**
-         * Sum in MINOR units (pence): if we have registration->amount in MAJOR units (e.g., 10.00),
-         * multiply by 100. If amount is null/zero, fall back to event ticket_cost (also MAJOR).
-         */
         $sumMinor = $paidRegs->sum(function ($r) use ($event) {
-            if (isset($r->amount) && is_numeric($r->amount) && (float)$r->amount > 0) {
-                // amount stored as major units (e.g., 10.00) -> convert to minor (1000)
+            if (isset($r->amount) && is_numeric($r->amount) && (float) $r->amount > 0) {
                 return (int) round(((float) $r->amount) * 100);
             }
-            // Fallback: event ticket_cost (major) -> minor
             return (int) round(((float) ($event->ticket_cost ?? 0)) * 100);
         });
 
-        $commissionMinor = (int) round($sumMinor * 0.20); // 20% commission
+        $commissionMinor = (int) round($sumMinor * 0.20);
         $payoutMinor     = max(0, $sumMinor - $commissionMinor);
 
-        // Is there an active processing payout for this event?
         $hasProcessingPayout = EventPayout::where('event_id', $event->id)
             ->where('user_id', Auth::id())
             ->where('status', 'processing')
             ->exists();
 
         return view('registrants.index', [
-            'event' => $event,
-            'isPaidEvent' => $isPaidEvent,
-            'sumMinor' => $sumMinor,
-            'commissionMinor' => $commissionMinor,
-            'payoutMinor' => $payoutMinor,
-            'currency' => 'GBP',
+            'event'               => $event,
+            'isPaidEvent'         => $isPaidEvent,
+            'sumMinor'            => $sumMinor,
+            'commissionMinor'     => $commissionMinor,
+            'payoutMinor'         => $payoutMinor,
+            'currency'            => 'GBP',
             'hasProcessingPayout' => $hasProcessingPayout,
         ]);
     }
@@ -95,7 +77,9 @@ class RegistrantsController extends Controller
     public function unlock(Event $event)
     {
         abort_unless($event->user_id === Auth::id(), 403);
-        if (($event->ticket_cost ?? 0) > 0) return redirect()->route('events.registrants', $event);
+        if (($event->ticket_cost ?? 0) > 0) {
+            return redirect()->route('events.registrants', $event);
+        }
 
         $already = EventUnlock::where('event_id', $event->id)
             ->where('user_id', Auth::id())
@@ -107,18 +91,20 @@ class RegistrantsController extends Controller
         }
 
         return view('registrants.unlock', [
-            'event' => $event,
-            'amount' => $this->unlockAmount,
-            'currency' => strtoupper($this->currency),
+            'event'   => $event,
+            'amount'  => $this->unlockAmount,
+            'currency'=> strtoupper($this->currency),
         ]);
     }
 
     public function checkout(Request $request, Event $event)
     {
         abort_unless($event->user_id === Auth::id(), 403);
-        if (($event->ticket_cost ?? 0) > 0) return redirect()->route('events.registrants', $event);
+        if (($event->ticket_cost ?? 0) > 0) {
+            return redirect()->route('events.registrants', $event);
+        }
 
-        $stripe = new \Stripe\StripeClient(config('services.stripe.secret'));
+        $stripe = new StripeClient(config('services.stripe.secret'));
 
         $session = $stripe->checkout->sessions->create([
             'mode' => 'payment',
@@ -130,15 +116,16 @@ class RegistrantsController extends Controller
                         'name'        => 'Unlock registrant details',
                         'description' => 'One-time unlock for event: ' . $event->name,
                     ],
-                    'unit_amount' => $this->unlockAmount, // minor units
+                    'unit_amount' => $this->unlockAmount,
                 ],
                 'quantity' => 1,
             ]],
             'metadata' => [
                 'purpose'  => 'registrants_unlock',
-                'event_id' => (string) $event->id,
+                'event_id' => (string) $event->id,   // keep internal numeric ID in metadata
                 'user_id'  => (string) Auth::id(),
             ],
+            // pass the *model* so URLs use public_id
             'success_url' => route('events.registrants.unlock.success', $event) . '?session_id={CHECKOUT_SESSION_ID}',
             'cancel_url'  => route('events.registrants.unlock', $event),
         ]);
@@ -160,7 +147,7 @@ class RegistrantsController extends Controller
             return redirect()->route('events.registrants.unlock', $event)->with('error', 'Missing session id.');
         }
 
-        $stripe  = new \Stripe\StripeClient(config('services.stripe.secret'));
+        $stripe  = new StripeClient(config('services.stripe.secret'));
         $session = $stripe->checkout->sessions->retrieve($sessionId, []);
 
         if (!$session || $session->payment_status !== 'paid') {

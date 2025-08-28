@@ -51,7 +51,7 @@
                             {{ $event->category }}
                         </span>
                     @endif
-                    @if ($isFree || ($event->is_promoted ?? false))
+                    @if ($event->is_promoted)
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-500 text-white shadow">
                             Featured
                         </span>
@@ -167,13 +167,13 @@
                             </div>
                         </div>
 
-                        <a href="{{ route('events.register.create', $event->id) }}"
+                        <a href="{{ route('events.register.create', $event) }}"
                            class="mt-5 w-full inline-flex justify-center items-center px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition">
                             Register
                         </a>
 
                         @if ($event->avatar_url)
-                            <a href="{{ route('events.avatar', $event->id) }}"
+                            <a href="{{ route('events.avatar', $event) }}"
                                class="mt-2 w-full inline-flex justify-center items-center px-4 py-2.5 rounded-xl bg-amber-500 text-white font-medium hover:bg-amber-600 transition">
                                 Create Personal Display Picture
                             </a>

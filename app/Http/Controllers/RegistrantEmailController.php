@@ -7,7 +7,6 @@ use App\Models\Event;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
 
 class RegistrantEmailController extends Controller
 {
@@ -32,27 +31,30 @@ class RegistrantEmailController extends Controller
             'message' => 'required|string|max:10000',
         ]);
 
-        $registrants = $event->registrations()
-            ->select('email')
-            ->whereNotNull('email')
+        // Unique, non-empty emails only
+        $emails = $event->registrations()
             ->pluck('email')
+            ->filter()        // remove null/empty
             ->unique()
             ->values();
 
-        if ($registrants->isEmpty()) {
+        if ($emails->isEmpty()) {
             return back()->with('error', 'No registrants with email.');
         }
 
-        // Send individually to each (avoids exposing addresses)
-        foreach ($registrants as $email) {
-            Mail::to($email)->send(new RegistrantBulkMail(
+        // Send one-by-one (keeps recipients private).
+        // If you enable queues later, swap ->send() for ->queue().
+        foreach ($emails as $to) {
+            Mail::to($to)->send(new RegistrantBulkMail(
                 $event,
                 $validated['subject'],
-                nl2br(e($validated['message']))
+                nl2br(e($validated['message'])) // simple HTML body
             ));
         }
 
-        return redirect()->route('events.registrants', $event->id)
-            ->with('success', 'Your message is being sent to registrants.');
+        // IMPORTANT: pass the *model* so the route uses public_id
+        return redirect()
+            ->route('events.registrants', $event)
+            ->with('success', 'Your message has been sent to registrants.');
     }
 }

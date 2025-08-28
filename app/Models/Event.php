@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Str;
 
 class Event extends Model
 {
-      use HasFactory;
+    use HasFactory;
 
     protected $fillable = [
         'user_id',
@@ -19,32 +20,39 @@ class Event extends Model
         'description',
         'avatar_url',
         'banner_url',
-        'ticket_cost'
+        'ticket_cost',
+        'is_promoted',   // <-- add this
+        'public_id',     // optional to keep; created automatically below
     ];
 
     protected $casts = [
-        'tags' => 'array',
+        'tags'        => 'array',
         'is_promoted' => 'boolean',
         'ticket_cost' => 'decimal:2',
     ];
 
-    public function sessions()
+    /** Use public_id in URLs/route model binding */
+    public function getRouteKeyName(): string
     {
-        return $this->hasMany(EventSession::class);
+        return 'public_id';
     }
 
-    public function registrations()
+    /** Auto-generate a unique public_id when creating */
+    protected static function booted()
     {
-        return $this->hasMany(EventRegistration::class);
+        static::creating(function (Event $event) {
+            if (empty($event->public_id)) {
+                do {
+                    $event->public_id = (string) Str::ulid(); // or Str::uuid()
+                } while (static::where('public_id', $event->public_id)->exists());
+            }
+        });
     }
 
-    // ...
-    public function unlocks() 
-    { 
-        return $this->hasMany(\App\Models\EventUnlock::class); 
-    }
-
-    public function payouts(){ return $this->hasMany(\App\Models\EventPayout::class); }
-
-
+    // Relationships
+    public function sessions()       { return $this->hasMany(EventSession::class); }
+    public function registrations()  { return $this->hasMany(EventRegistration::class); }
+    public function unlocks()        { return $this->hasMany(\App\Models\EventUnlock::class); }
+    public function payouts()        { return $this->hasMany(\App\Models\EventPayout::class); }
+    public function user()           { return $this->belongsTo(\App\Models\User::class); } // used in emails
 }

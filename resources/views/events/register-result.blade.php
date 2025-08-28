@@ -6,6 +6,7 @@
             'warning' => ['bg' => 'bg-amber-50',   'bd' => 'border-amber-200',   'tx' => 'text-amber-800'],
             'info'    => ['bg' => 'bg-blue-50',    'bd' => 'border-blue-200',    'tx' => 'text-blue-800'],
         ][$state ?? 'info'];
+
         $image = $event->banner_url
             ? asset('storage/' . $event->banner_url)
             : ($event->avatar_url ? asset('storage/' . $event->avatar_url) : null);
@@ -53,16 +54,18 @@
 
             <div class="mt-6 flex flex-col sm:flex-row gap-3">
                 @if ($event->avatar_url)
-                    <a href="{{ route('events.avatar', $event->id) }}"
-                        class="inline-flex justify-center items-center px-4 py-2.5 rounded-xl bg-amber-500 text-white font-medium hover:bg-amber-600 transition">
+                    <a href="{{ route('events.avatar', $event) }}"
+                       class="inline-flex justify-center items-center px-4 py-2.5 rounded-xl bg-amber-500 text-white font-medium hover:bg-amber-600 transition">
                         Create Personal Display Picture
                     </a>
                 @endif
-                <a href="{{ route('events.show', $event->id) }}"
+
+                <a href="{{ route('events.show', $event) }}"
                    class="inline-flex justify-center items-center px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700">
                     Back to event
                 </a>
-                <a href="{{ route('events.register.create', $event->id) }}"
+
+                <a href="{{ route('events.register.create', $event) }}"
                    class="inline-flex justify-center items-center px-4 py-2.5 rounded-xl bg-gray-100 text-gray-800 hover:bg-gray-200">
                     Register another attendee
                 </a>

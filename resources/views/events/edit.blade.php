@@ -108,7 +108,7 @@
 
                     <div>
                         <label class="block text-gray-700 font-semibold">Event Avatar (replace)</label>
-                        <input type="file" name="avatar" class="w-full border rounded p-2">
+                        <input type="file" name="avatar" accept="image/*" class="w-full border rounded p-2">
                         @if ($event->avatar_url)
                             <div class="mt-2 flex items-center gap-2 text-xs text-gray-600">
                                 <img src="{{ asset('storage/'.$event->avatar_url) }}" alt="avatar" class="h-10 w-10 rounded object-cover">
@@ -120,7 +120,7 @@
 
                 <div>
                     <label class="block text-gray-700 font-semibold">Event Banner (replace)</label>
-                    <input type="file" name="banner" class="w-full border rounded p-2">
+                    <input type="file" name="banner" accept="image/*" class="w-full border rounded p-2">
                     @if ($event->banner_url)
                         <div class="mt-2 flex items-center gap-2 text-xs text-gray-600">
                             <img src="{{ asset('storage/'.$event->banner_url) }}" alt="banner" class="h-12 w-20 rounded object-cover">
