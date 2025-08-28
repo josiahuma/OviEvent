@@ -123,7 +123,7 @@
                     <input type="file" name="banner" class="w-full border rounded p-2">
                     @if ($event->banner_url)
                         <div class="mt-2 flex items-center gap-2 text-xs text-gray-600">
-                            <img src="{{ asset('storage/'.$event->banner_url) }}" alt="banner" class="h-12 w-20 rounded object-cover">
+                            <img src="{{ asset('storage/banners'.$event->banner_url) }}" alt="banner" class="h-12 w-20 rounded object-cover">
                             <span class="underline truncate">{{ $event->banner_url }}</span>
                         </div>
                     @endif
