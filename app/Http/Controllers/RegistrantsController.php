@@ -11,7 +11,7 @@ use Stripe\StripeClient;
 
 class RegistrantsController extends Controller
 {
-    private int $unlockAmount = 900; // £9.00 to unlock free-event registrants (minor units)
+    private int $unlockAmount = 10; // £9.00 to unlock free-event registrants (minor units)
     private string $currency = 'gbp';
 
     public function index(Event $event)
