@@ -52,17 +52,6 @@ Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'callback'
     ->whereIn('provider', ['google', 'github'])
     ->name('oauth.callback');
 
-// Back-compat: /oauth/... → /auth/...
-Route::get('/oauth/{provider}/redirect', function ($provider) {
-    return redirect()->route('oauth.redirect', ['provider' => $provider]);
-})->whereIn('provider', ['google', 'github']);
-
-Route::get('/oauth/{provider}/callback', function (Request $request, $provider) {
-    $qs = $request->getQueryString();
-    return redirect()->to(
-        route('oauth.callback', ['provider' => $provider]) . ($qs ? ('?'.$qs) : '')
-    );
-})->whereIn('provider', ['google', 'github']);
 /* ------------------------------------------------------ */
 
 // AUTH-only routes (manage your own events)
