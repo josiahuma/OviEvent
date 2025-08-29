@@ -55,9 +55,22 @@
                                 </span>
                             @endif
 
+                            @php
+                                $isFree = ($event->ticket_cost ?? 0) == 0;
+                                $cur = strtoupper($event->ticket_currency ?? 'GBP');
+                                $symbols = [
+                                    'GBP'=>'£','USD'=>'$','EUR'=>'€','NGN'=>'₦','KES'=>'KSh','GHS'=>'₵','ZAR'=>'R',
+                                    'CAD'=>'$','AUD'=>'$','NZD'=>'$','INR'=>'₹','JPY'=>'¥','CNY'=>'¥'
+                                ];
+                                $sym = $symbols[$cur] ?? '';
+                                $priceLabel = $isFree
+                                    ? 'Free'
+                                    : ($sym ? $sym.number_format($event->ticket_cost, 2) : $cur.' '.number_format($event->ticket_cost, 2));
+                            @endphp
+
                             <span class="absolute top-3 right-3 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold
-                                {{ ($event->ticket_cost ?? 0) == 0 ? 'bg-emerald-500 text-white' : 'bg-black/80 text-white' }}">
-                                {{ ($event->ticket_cost ?? 0) == 0 ? 'Free' : '£' . number_format($event->ticket_cost, 2) }}
+                                {{ $isFree ? 'bg-emerald-500 text-white' : 'bg-black/80 text-white' }}">
+                                {{ $priceLabel }}
                             </span>
                         </div>
 
@@ -120,6 +133,16 @@
                                 {{-- View registrants / Unlock --}}
                                 @php
                                     $isFree = ($event->ticket_cost ?? 0) == 0;
+                                    $cur = strtoupper($event->ticket_currency ?? 'GBP');
+                                    $symbols = [
+                                        'GBP' => '£','USD' => '$','EUR' => '€','NGN' => '₦','KES' => 'KSh',
+                                        'GHS' => '₵','ZAR' => 'R','CAD' => '$','AUD' => '$','NZD' => '$',
+                                        'INR' => '₹','JPY' => '¥','CNY' => '¥'
+                                    ];
+                                    $sym = $symbols[$cur] ?? '';
+                                    $priceLabel = $isFree
+                                        ? 'Free'
+                                        : ($sym ? $sym.number_format($event->ticket_cost, 2) : $cur.' '.number_format($event->ticket_cost, 2));
                                     $isUnlocked = optional($event->unlocks->first())->unlocked_at !== null;
                                 @endphp
 

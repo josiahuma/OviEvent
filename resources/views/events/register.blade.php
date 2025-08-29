@@ -17,7 +17,9 @@
                 <div>
                     <div class="text-sm text-gray-500">Ticket</div>
                     <div class="text-2xl font-bold text-gray-900">
-                        {{ ($event->ticket_cost ?? 0) > 0 ? '£'.number_format($event->ticket_cost,2) : 'Free' }}
+                    {{ ($event->ticket_cost ?? 0) > 0
+                        ? ($event->currency_symbol . number_format($event->ticket_cost, 2))
+                        : 'Free' }}
                     </div>
                 </div>
                 @php

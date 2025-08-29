@@ -89,10 +89,20 @@
                 <textarea name="description" class="w-full border rounded p-2" rows="4"></textarea>
             </div>
 
-            <!-- Ticket Cost -->
-            <div class="mb-4">
-                <label class="block text-gray-700 font-semibold">Ticket Cost (£)</label>
-                <input type="number" name="ticket_cost" step="0.01" class="w-full border rounded p-2">
+            <!-- Ticket Cost + Currency -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-gray-700 font-semibold">Ticket Cost</label>
+                <input type="number" step="0.01" name="ticket_cost" class="w-full border rounded p-2">
+            </div>
+            <div>
+                <label class="block text-gray-700 font-semibold">Currency</label>
+                <select name="ticket_currency" class="w-full border rounded p-2">
+                @foreach (['GBP','USD','EUR','NGN','KES','GHS','ZAR','CAD','AUD'] as $cur)
+                    <option value="{{ $cur }}" @selected(old('ticket_currency', $event->ticket_currency ?? 'GBP') === $cur)>{{ $cur }}</option>
+                @endforeach
+                </select>
+            </div>
             </div>
 
             <!-- Event Banner -->

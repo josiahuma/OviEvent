@@ -113,7 +113,11 @@ class EventController extends Controller
     public function dashboard()
     {
         $events = Event::where('user_id', Auth::id())
-            ->withCount('registrations')
+            ->withCount([
+                'registrations as registrations_count' => function ($q) {
+                    $q->whereIn('status', ['paid','free']); // exclude 'pending'
+                }
+            ])
             ->withMin('sessions', 'session_date')
             ->with(['unlocks' => fn($q) => $q->where('user_id', Auth::id())])
             ->latest()
@@ -139,7 +143,8 @@ class EventController extends Controller
             'tags.*'       => 'string|max:50',
             'location'     => 'nullable|string|max:255',
             'description'  => 'nullable|string',
-            'ticket_cost'  => 'nullable|numeric|min:0',
+            'ticket_cost'     => 'nullable|numeric|min:0|max:99999999.99',
+            'ticket_currency' => 'required|string|in:GBP,USD,EUR,NGN,KES,GHS,ZAR,CAD,AUD|size:3',
             'avatar'       => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
             'banner'       => 'required|image|mimes:jpg,jpeg,png|max:4096',
             'is_promoted'  => 'nullable|boolean',
@@ -167,6 +172,7 @@ class EventController extends Controller
             'location'    => $validated['location'] ?? null,
             'description' => $validated['description'] ?? null,
             'ticket_cost' => $validated['ticket_cost'] ?? 0,
+            'ticket_currency' => strtoupper($validated['ticket_currency']),
             'avatar_url'  => $avatarUrl,
             'banner_url'  => $bannerUrl,
             'is_promoted' => $validated['is_promoted'] ?? false,
@@ -225,9 +231,10 @@ class EventController extends Controller
             'tags.*'      => 'string|max:50',
             'location'    => 'nullable|string|max:255',
             'description' => 'nullable|string',
-            'ticket_cost' => 'nullable|numeric|min:0',
+            'ticket_cost'     => 'nullable|numeric|min:0|max:99999999.99',
+            'ticket_currency' => 'required|string|in:GBP,USD,EUR,NGN,KES,GHS,ZAR,CAD,AUD|size:3',
             'avatar'      => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-            'banner'      => 'required|image|mimes:jpg,jpeg,png|max:4096',
+            'banner'      => 'nullable|image|mimes:jpg,jpeg,png|max:4096',
         ]);
 
         // Avatar
@@ -255,6 +262,7 @@ class EventController extends Controller
         $event->location    = $validated['location'] ?? null;
         $event->description = $validated['description'] ?? null;
         $event->ticket_cost = $validated['ticket_cost'] ?? 0;
+        $event->ticket_currency = strtoupper($validated['ticket_currency']);
 
         $event->save();
 

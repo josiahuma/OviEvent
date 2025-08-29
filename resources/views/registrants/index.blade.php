@@ -54,7 +54,7 @@
             <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
                 <div class="text-sm text-gray-500">Amount earned</div>
                 <div class="mt-1 text-2xl font-semibold text-gray-900">
-                    £{{ number_format($sumMinor/100, 2) }}
+                    {{ $symbol }}{{ number_format($sumMinor/100, 2) }} <span class="text-base text-gray-500">{{ $currency }}</span>
                 </div>
             </div>
             <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
@@ -80,7 +80,9 @@
                         <div class="text-sm text-gray-500">Actions</div>
                         <div class="mt-1 text-xs text-gray-500">
                             Available payout:
-                            <span class="font-medium text-gray-900">£{{ number_format($payoutMinor/100, 2) }}</span>
+                            <span class="font-medium text-gray-900">
+                                {{ $symbol }}{{ number_format($payoutMinor/100, 2) }} <span class="text-xs text-gray-500">{{ $currency }}</span>
+                            </span>
                         </div>
                     </div>
 

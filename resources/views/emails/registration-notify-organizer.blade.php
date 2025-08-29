@@ -29,6 +29,9 @@
 
     $maskedEmail  = $maskEmail($registration->email ?? null);
     $maskedMobile = $maskMobile($registration->mobile ?? null);
+
+     $CUR = strtoupper($event->ticket_currency ?? 'GBP');
+    $SYM = ['GBP'=>'£','USD'=>'$','EUR'=>'€','NGN'=>'₦','KES'=>'KSh','GHS'=>'₵','ZAR'=>'R'][$CUR] ?? ($CUR.' ');
 @endphp
 
 <p>
@@ -56,8 +59,8 @@
 
 <p>
     Status: {{ ucfirst($registration->status ?? 'pending') }}
-    @if(is_numeric($registration->amount) && $registration->amount > 0)
-        — £{{ number_format((float) $registration->amount, 2) }}
+    @if(($registration->status ?? '') === 'paid' && is_numeric($registration->amount) && $registration->amount > 0)
+        — {{ $SYM }}{{ number_format((float) $registration->amount, 2) }} {{ $CUR }}
     @endif
 </p>
 

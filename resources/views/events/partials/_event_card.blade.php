@@ -21,7 +21,16 @@
     }
 
     $isFree = ($event->ticket_cost ?? 0) == 0;
-    $priceLabel = $isFree ? 'Free' : '£' . number_format($event->ticket_cost, 2);
+    $cur = strtoupper($event->ticket_currency ?? 'GBP');
+    $symbols = [
+        'GBP' => '£','USD' => '$','EUR' => '€','NGN' => '₦','KES' => 'KSh',
+        'GHS' => '₵','ZAR' => 'R','CAD' => '$','AUD' => '$','NZD' => '$',
+        'INR' => '₹','JPY' => '¥','CNY' => '¥'
+    ];
+    $sym = $symbols[$cur] ?? '';
+    $priceLabel  = $isFree
+        ? 'Free'
+        : ($sym ? $sym.number_format($event->ticket_cost, 2) : $cur.' '.number_format($event->ticket_cost, 2));
 
     // Featured ONLY if forced or explicitly promoted
     $isFeatured = ($forceFeatured ?? false) || ($event->is_promoted ?? false);

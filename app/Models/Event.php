@@ -23,6 +23,7 @@ class Event extends Model
         'ticket_cost',
         'is_promoted',   // <-- add this
         'public_id',     // optional to keep; created automatically below
+        'ticket_currency',
     ];
 
     protected $casts = [
@@ -30,6 +31,22 @@ class Event extends Model
         'is_promoted' => 'boolean',
         'ticket_cost' => 'decimal:2',
     ];
+
+    public function getCurrencySymbolAttribute(): string
+    {
+        return match (strtoupper($this->ticket_currency ?? 'GBP')) {
+            'GBP' => '£',
+            'USD' => '$',
+            'EUR' => '€',
+            'NGN' => '₦',
+            'KES' => 'KSh',
+            'GHS' => 'GH₵',
+            'ZAR' => 'R',
+            'CAD' => 'C$',
+            'AUD' => 'A$',
+            default => strtoupper($this->ticket_currency ?? 'GBP').' ',
+        };
+    }
 
     /** Use public_id in URLs/route model binding */
     public function getRouteKeyName(): string
