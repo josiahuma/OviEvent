@@ -9,7 +9,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\RegistrantsController;
 use App\Http\Controllers\PayoutController;
-use App\Models\Event as EventModel; // 👈 alias the Eloquent model
+use App\Models\Event as EventModel;
+use App\Http\Controllers\TicketLookupController;
 
 /**
  * Legacy numeric ID redirect (301).
@@ -76,6 +77,18 @@ Route::middleware('auth')->group(function () {
 });
 
 // PUBLIC registration + avatar (these don't clash with /events/create)
+Route::get('/events/{event}/ticket', [TicketLookupController::class, 'showForm'])
+    ->name('events.ticket.find');
+
+Route::post('/events/{event}/ticket', [TicketLookupController::class, 'sendLink'])
+    ->name('events.ticket.sendlink');
+
+Route::get('/events/{event}/ticket/manage/{reg}', [TicketLookupController::class, 'edit'])
+    ->name('events.ticket.edit');
+
+Route::post('/events/{event}/ticket/manage/{reg}', [TicketLookupController::class, 'update'])
+    ->name('events.ticket.update');
+
 Route::get('/events/{event}/avatar', [EventController::class, 'avatar'])
     ->name('events.avatar');
 

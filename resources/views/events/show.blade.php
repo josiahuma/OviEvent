@@ -180,6 +180,10 @@
                            class="mt-5 w-full inline-flex justify-center items-center px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition">
                             Register
                         </a>
+                        <a href="{{ route('events.ticket.find', $event) }}"
+                            class="mt-5 w-full inline-flex justify-center items-center px-4 py-2.5 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700 transition">
+                            Already registered? Manage your booking
+                        </a>
 
                         @if ($event->avatar_url)
                             <a href="{{ route('events.avatar', $event) }}"
