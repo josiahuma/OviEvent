@@ -12,6 +12,7 @@ use App\Http\Controllers\PayoutController;
 use App\Models\Event as EventModel;
 use App\Http\Controllers\TicketLookupController;
 use App\Http\Controllers\MyTicketsController;
+use App\Http\Controllers\SocialAuthController;
 
 /**
  * Legacy numeric ID redirect (301).
@@ -39,6 +40,16 @@ Route::get('/pricing', [PageController::class, 'pricing'])->name('pricing');
 // Stripe webhook
 Route::post('/stripe/webhook', [StripeWebhookController::class, 'handle'])
     ->name('stripe.webhook');
+
+// OAuth routes
+Route::get('/auth/{provider}/redirect', [SocialAuthController::class, 'redirect'])
+    ->whereIn('provider', ['google','github','facebook','microsoft','apple'])
+    ->name('oauth.redirect');
+
+Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'callback'])
+    ->whereIn('provider', ['google','github','facebook','microsoft','apple'])
+    ->name('oauth.callback');
+
 
 // AUTH-only routes (manage your own events)
 Route::middleware('auth')->group(function () {
