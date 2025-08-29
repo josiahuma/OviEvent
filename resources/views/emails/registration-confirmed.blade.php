@@ -22,3 +22,8 @@
     See event:
     <a href="{{ route('events.show', $event) }}">{{ route('events.show', $event) }}</a>
 </p>
+
+<p>
+    Why not consider signing up for an OviEvent account? It makes managing your events/tickets easier.
+    <a href="{{ route('register') }}">Create an account</a>
+</p>
