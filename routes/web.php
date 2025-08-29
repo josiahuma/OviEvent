@@ -41,18 +41,18 @@ Route::get('/pricing', [PageController::class, 'pricing'])->name('pricing');
 Route::post('/stripe/webhook', [StripeWebhookController::class, 'handle'])
     ->name('stripe.webhook');
 
-// AUTH-only routes (manage your own events)
-Route::middleware('auth')->group(function () {
-    // /oauth/google/redirect
-    Route::get('{provider}/redirect', [SocialAuthController::class, 'redirect'])
+// /oauth/google/redirect
+Route::get('{provider}/redirect', [SocialAuthController::class, 'redirect'])
         ->whereIn('provider', ['google','github'])
         ->name('oauth.redirect');
 
-    // /oauth/google/callback
-    Route::get('{provider}/callback', [SocialAuthController::class, 'callback'])
+// /oauth/google/callback
+Route::get('{provider}/callback', [SocialAuthController::class, 'callback'])
         ->whereIn('provider', ['google','github'])
         ->name('oauth.callback');
 
+// AUTH-only routes (manage your own events)
+Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
