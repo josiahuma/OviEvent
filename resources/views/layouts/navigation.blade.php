@@ -15,9 +15,17 @@
                     <x-nav-link :href="route('how')" :active="request()->routeIs('how')">
                         How it works
                     </x-nav-link>
+
                     <x-nav-link :href="route('pricing')" :active="request()->routeIs('pricing')">
                         Pricing
                     </x-nav-link>
+
+                    @auth
+                        {{-- FIX: use x-nav-link so spacing matches --}}
+                        <x-nav-link :href="route('my.tickets')" :active="request()->routeIs('my.tickets*')">
+                            My tickets
+                        </x-nav-link>
+                    @endauth
 
                     @auth
                         <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
@@ -71,11 +79,23 @@
     <!-- Mobile menu -->
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
         <div class="pt-2 pb-3 space-y-1">
-            <x-responsive-nav-link :href="route('how')" :active="request()->routeIs('how')">How it works</x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('pricing')" :active="request()->routeIs('pricing')">Pricing</x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('how')" :active="request()->routeIs('how')">
+                How it works
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('pricing')" :active="request()->routeIs('pricing')">
+                Pricing
+            </x-responsive-nav-link>
 
             @auth
-                <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">Create Events</x-responsive-nav-link>
+                {{-- add My tickets to mobile too --}}
+                <x-responsive-nav-link :href="route('my.tickets')" :active="request()->routeIs('my.tickets*')">
+                    My tickets
+                </x-responsive-nav-link>
+
+                <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
+                    Create Events
+                </x-responsive-nav-link>
             @endauth
         </div>
 

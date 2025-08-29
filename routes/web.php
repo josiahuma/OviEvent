@@ -11,6 +11,7 @@ use App\Http\Controllers\RegistrantsController;
 use App\Http\Controllers\PayoutController;
 use App\Models\Event as EventModel;
 use App\Http\Controllers\TicketLookupController;
+use App\Http\Controllers\MyTicketsController;
 
 /**
  * Legacy numeric ID redirect (301).
@@ -74,6 +75,11 @@ Route::middleware('auth')->group(function () {
         ->name('events.registrants.email');
     Route::post('/events/{event}/registrants/email', [RegistrantEmailController::class, 'send'])
         ->name('events.registrants.email.send');
+
+    // "My Tickets" area (for attendees to manage their own registrations)
+    Route::get('/my/tickets', [MyTicketsController::class, 'index'])->name('my.tickets');
+    Route::get('/my/tickets/{registration}', [MyTicketsController::class, 'edit'])->name('my.tickets.edit');
+    Route::post('/my/tickets/{registration}', [MyTicketsController::class, 'update'])->name('my.tickets.update');
 });
 
 // PUBLIC registration + avatar (these don't clash with /events/create)

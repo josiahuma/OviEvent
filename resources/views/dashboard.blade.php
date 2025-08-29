@@ -83,9 +83,42 @@
                                     @endif
                                 </div>
                                 <div class="text-right">
+                                    @php
+                                        // define per-card
+                                        $isPaidEvent = ! $isFree;
+
+                                        // collection-safe
+                                        $regs = $event->registrations ?? collect();
+
+                                        if ($isPaidEvent) {
+                                            // only count completed/paid tickets
+                                            $completed = $regs->filter(function ($r) {
+                                                $s = strtolower((string)($r->status ?? ''));
+                                                return in_array($s, ['paid','complete','completed','succeeded'], true);
+                                            });
+
+                                            $totalUnits = $completed->sum(function ($r) {
+                                                return max(1, (int)($r->quantity ?? 1));
+                                            });
+                                            $unitLabel = 'tickets';
+                                        } else {
+                                            // free events: count total attendees (registrant + guests)
+                                            $totalUnits = $regs->sum(function ($r) {
+                                                $ad = max(0, (int)($r->party_adults ?? 0));
+                                                $ch = max(0, (int)($r->party_children ?? 0));
+                                                return 1 + $ad + $ch;
+                                            });
+                                            $unitLabel = 'attendees';
+                                        }
+                                    @endphp
+
                                     <div class="text-xs text-gray-500">Registrations</div>
-                                    <div class="text-sm font-semibold text-gray-900">{{ $event->registrations_count ?? 0 }}</div>
+                                    <div class="text-sm font-semibold text-gray-900">
+                                        {{ number_format($totalUnits) }}
+                                        <span class="text-xs text-gray-500">({{ $unitLabel }})</span>
+                                    </div>
                                 </div>
+
                             </div>
 
                             @if ($event->location)
