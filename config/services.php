@@ -47,7 +47,7 @@ return [
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect' => env('GOOGLE_REDIRECT_URI'), // e.g. https://yourapp.com/auth/google/callback
+        'redirect' => null, //set in controller
     ],
     'github' => [
         'client_id' => env('GITHUB_CLIENT_ID'),
