@@ -25,13 +25,25 @@ class RegistrationController extends Controller
     {
         $event->load('sessions');
 
-        $validated = $request->validate([
+        $baseRules = [
             'name'          => 'required|string|max:255',
             'email'         => 'required|email',
             'mobile'        => 'nullable|string|max:30',
             'session_ids'   => 'required|array|min:1',
             'session_ids.*' => 'integer|exists:event_sessions,id',
-        ]);
+        ];
+
+        $isPaid = ($event->ticket_cost ?? 0) > 0;
+
+        // Extra rules depending on free vs paid
+        $extraRules = $isPaid
+            ? ['quantity' => 'required|integer|min:1|max:10']
+            : [
+                'party_adults'   => 'nullable|integer|min:0|max:20',
+                'party_children' => 'nullable|integer|min:0|max:20',
+            ];
+
+        $validated = $request->validate($baseRules + $extraRules);
 
         // Only allow sessions that belong to this event
         $validSessionIds = $event->sessions()
@@ -59,16 +71,22 @@ class RegistrationController extends Controller
                 ->withInput();
         }
 
-        $isPaid = ($event->ticket_cost ?? 0) > 0;
+        // Prepare values
+        $quantity       = $isPaid ? (int) $validated['quantity'] : 1;
+        $partyAdults    = $isPaid ? 0 : (int) ($validated['party_adults'] ?? 0);
+        $partyChildren  = $isPaid ? 0 : (int) ($validated['party_children'] ?? 0);
 
         $registration = EventRegistration::create([
-            'event_id' => $event->id,
-            'user_id'  => Auth::id(),
-            'name'     => $validated['name'],
-            'email'    => $validated['email'],
-            'mobile'   => $validated['mobile'] ?? null,
-            'status'   => $isPaid ? 'pending' : 'free',
-            'amount'   => $event->ticket_cost ?? 0,
+            'event_id'       => $event->id,
+            'user_id'        => Auth::id(),
+            'name'           => $validated['name'],
+            'email'          => $validated['email'],
+            'mobile'         => $validated['mobile'] ?? null,
+            'status'         => $isPaid ? 'pending' : 'free',
+            'amount'         => $isPaid ? (($event->ticket_cost ?? 0) * $quantity) : 0, // major units
+            'quantity'       => $quantity,
+            'party_adults'   => $partyAdults,
+            'party_children' => $partyChildren,
         ]);
 
         $registration->sessions()->sync($validSessionIds);
@@ -80,13 +98,12 @@ class RegistrationController extends Controller
             );
         }
 
-        // ---- FREE EVENTS → go straight to the "result" page
+        // ---- FREE EVENTS → straight to result
         if (! $isPaid) {
             Mail::to($registration->email)->send(
                 new RegistrationConfirmedMail($event, $registration)
             );
 
-            // pass *model* for route + add query flag
             return redirect()->to(
                 route('events.register.result', ['event' => $event, 'registered' => 1])
             );
@@ -104,18 +121,18 @@ class RegistrationController extends Controller
                     'product_data' => ['name' => $event->name],
                     'unit_amount' => (int) round(($event->ticket_cost ?? 0) * 100),
                 ],
-                'quantity' => 1,
+                'quantity' => $quantity,
             ]],
-            // pass *model* for route, append query flags
             'success_url' => route('events.register.result', ['event' => $event, 'paid' => 1]) . '&session_id={CHECKOUT_SESSION_ID}',
             'cancel_url'  => route('events.register.result', ['event' => $event, 'canceled' => 1]),
             'metadata' => [
-                'event_id'        => (string) $event->id,            // keep internal numeric id for DB joins
+                'event_id'        => (string) $event->id,
                 'registration_id' => (string) $registration->id,
                 'session_ids'     => implode(',', $validSessionIds),
                 'email'           => $validated['email'],
                 'name'            => $validated['name'],
                 'user_id'         => (string) (Auth::id() ?? ''),
+                'quantity'        => (string) $quantity,
             ],
         ]);
 
@@ -123,6 +140,7 @@ class RegistrationController extends Controller
 
         return redirect()->away($session->url);
     }
+
 
     // NEW: Result page (success/cancel/errors)
     public function result(Request $request, Event $event)

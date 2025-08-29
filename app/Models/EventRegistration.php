@@ -8,7 +8,7 @@ class EventRegistration extends Model
 {
     //
     protected $fillable = [
-        'event_id','user_id','name','email','mobile','status','stripe_session_id','amount',
+        'event_id','user_id','name','email','mobile','status','stripe_session_id','amount','quantity', 'party_adults', 'party_children',
     ];
 
     public function event() {
