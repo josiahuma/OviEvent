@@ -41,13 +41,10 @@ return [
     ],
 
     'google' => [
-        'maps_key' => env('GOOGLE_MAPS_API_KEY'),
-    ],
-
-    'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => null, //set in controller
+        'maps_key' => env('GOOGLE_MAPS_API_KEY'),
     ],
     'github' => [
         'client_id' => env('GITHUB_CLIENT_ID'),
