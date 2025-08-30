@@ -24,7 +24,20 @@
         $priceLabel = $isFree
             ? 'Free'
             : ($sym ? $sym.number_format($event->ticket_cost, 2) : $cur.' '.number_format($event->ticket_cost, 2));
-        $tags       = is_array($event->tags) ? $event->tags : (json_decode($event->tags ?? '[]', true) ?: []);
+        $tags = is_array($event->tags) ? $event->tags : (json_decode($event->tags ?? '[]', true) ?: []);
+
+        // --- Countdown target: next upcoming session (if any) ---
+        $sortedSessions = $event->sessions->sortBy('session_date');
+        $nextFuture = $sortedSessions->first(function($s){
+            return \Carbon\Carbon::parse($s->session_date)->isFuture();
+        });
+        // ISO string for JS
+        $countdownIso = $nextFuture ? \Carbon\Carbon::parse($nextFuture->session_date)->toIso8601String() : null;
+
+        // For the small date chip on the right card
+        $nextDateForChip = $nextFuture
+            ? $nextFuture->session_date
+            : optional($sortedSessions->first())->session_date;
     @endphp
 
     @section('title', $ogTitle)
@@ -83,7 +96,45 @@
             <div class="lg:col-span-2 space-y-6">
                 <div>
                     <h1 class="text-3xl md:text-4xl font-bold text-gray-900">{{ $event->name }}</h1>
-                    <div class="mt-2 flex flex-wrap items-center gap-3 text-sm text-gray-600">
+
+                    {{-- Countdown (to next upcoming session) --}}
+                    @if($countdownIso)
+                        <div
+                            x-data="countdown('{{ $countdownIso }}')"
+                            x-init="start()"
+                            class="mt-4"
+                            aria-label="Countdown to event start"
+                        >
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 max-w-xl">
+                                <!-- Days -->
+                                <div class="flex flex-col items-center justify-center border border-gray-300 bg-white px-4 py-3 shadow-sm rounded-none">
+                                    <span class="text-[10px] sm:text-xs tracking-widest uppercase text-gray-500">Days</span>
+                                    <span class="mt-1 text-2xl sm:text-3xl font-bold tabular-nums leading-none" x-text="dd"></span>
+                                </div>
+
+                                <!-- Hours -->
+                                <div class="flex flex-col items-center justify-center border border-gray-300 bg-white px-4 py-3 shadow-sm rounded-none">
+                                    <span class="text-[10px] sm:text-xs tracking-widest uppercase text-gray-500">Hours</span>
+                                    <span class="mt-1 text-2xl sm:text-3xl font-bold tabular-nums leading-none" x-text="hh"></span>
+                                </div>
+
+                                <!-- Minutes -->
+                                <div class="flex flex-col items-center justify-center border border-gray-300 bg-white px-4 py-3 shadow-sm rounded-none">
+                                    <span class="text-[10px] sm:text-xs tracking-widest uppercase text-gray-500">Minutes</span>
+                                    <span class="mt-1 text-2xl sm:text-3xl font-bold tabular-nums leading-none" x-text="mm"></span>
+                                </div>
+
+                                <!-- Seconds -->
+                                <div class="flex flex-col items-center justify-center border border-gray-300 bg-white px-4 py-3 shadow-sm rounded-none">
+                                    <span class="text-[10px] sm:text-xs tracking-widest uppercase text-gray-500">Seconds</span>
+                                    <span class="mt-1 text-2xl sm:text-3xl font-bold tabular-nums leading-none" x-text="ss"></span>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
+
+                    <div class="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-600">
                         @if ($event->organizer)
                             <span class="inline-flex items-center gap-1.5">
                                 <svg class="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-4 0-8 2-8 6v1h16v-1c0-4-4-6-8-6z"/></svg>
@@ -168,22 +219,31 @@
                             </div>
                             <div class="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
                                 <svg class="h-4 w-4 text-gray-500" viewBox="0 0 24 24" fill="currentColor"><path d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a2 2 0 0 1 2 2v3H3V6a2 2 0 0 1 2-2h1V3a1 1 0 0 1 1-1z"/><path d="M3 10h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8z"/></svg>
-                                @if ($event->sessions->first())
-                                    <span>{{ \Carbon\Carbon::parse($event->sessions->first()->session_date)->format('d M Y') }}</span>
+                                @if ($nextDateForChip)
+                                    <span>{{ \Carbon\Carbon::parse($nextDateForChip)->format('d M Y') }}</span>
                                 @else
                                     <span>Dates TBA</span>
                                 @endif
                             </div>
                         </div>
 
+                        {{-- Register / Manage buttons --}}
                         <a href="{{ route('events.register.create', $event) }}"
                            class="mt-5 w-full inline-flex justify-center items-center px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition">
                             Register
                         </a>
-                        <a href="{{ route('events.ticket.find', $event) }}"
-                            class="mt-5 w-full inline-flex justify-center items-center px-4 py-2.5 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700 transition">
-                            Already registered? Manage your booking
-                        </a>
+
+                        @auth
+                            <a href="{{ route('my.tickets') }}"
+                               class="mt-2 w-full inline-flex justify-center items-center px-4 py-2.5 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700 transition">
+                                Manage my tickets
+                            </a>
+                        @else
+                            <a href="{{ route('events.ticket.find', $event) }}"
+                               class="mt-2 w-full inline-flex justify-center items-center px-4 py-2.5 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700 transition">
+                                Already registered? Manage your booking
+                            </a>
+                        @endauth
 
                         @if ($event->avatar_url)
                             <a href="{{ route('events.avatar', $event) }}"
@@ -220,4 +280,30 @@
             </div>
         </div>
     </div>
+
+    {{-- Alpine countdown helper --}}
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('countdown', (iso) => ({
+                target: new Date(iso).getTime(),
+                dd: '0', hh: '00', mm: '00', ss: '00',
+                timer: null,
+                start() {
+                    this.tick();
+                    this.timer = setInterval(() => this.tick(), 1000);
+                },
+                tick() {
+                    const diff = Math.max(0, this.target - Date.now());
+                    const d = Math.floor(diff / 86400000);
+                    const h = Math.floor((diff % 86400000) / 3600000);
+                    const m = Math.floor((diff % 3600000) / 60000);
+                    const s = Math.floor((diff % 60000) / 1000);
+                    this.dd = String(d);
+                    this.hh = String(h).padStart(2, '0');
+                    this.mm = String(m).padStart(2, '0');
+                    this.ss = String(s).padStart(2, '0');
+                }
+            }))
+        })
+    </script>
 </x-app-layout>
