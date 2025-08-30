@@ -105,7 +105,7 @@
                             class="mt-4"
                             aria-label="Countdown to event start"
                         >
-                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 max-w-xl">
+                            <div class="grid grid-cols-4 sm:grid-cols-4 gap-2 sm:gap-3 max-w-xl">
                                 <!-- Days -->
                                 <div class="flex flex-col items-center justify-center border border-gray-300 bg-white px-4 py-3 shadow-sm rounded-none">
                                     <span class="text-[10px] sm:text-xs tracking-widest uppercase text-gray-500">Days</span>
