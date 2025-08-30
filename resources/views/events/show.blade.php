@@ -245,14 +245,19 @@
                                 Registration closed
                             </span>
                         @endif
+                        @php
+                            $manageUrl = auth()->check()
+                                ? route('my.tickets')
+                                : route('events.ticket.find', $event);
+                        @endphp
                         @auth
                             <a href="{{ route('my.tickets') }}"
                                class="mt-2 w-full inline-flex justify-center items-center px-4 py-2.5 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700 transition">
                                 Manage my tickets
                             </a>
                         @else
-                            <a href="{{ route('events.ticket.find', $event) }}"
-                               class="mt-2 w-full inline-flex justify-center items-center px-4 py-2.5 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700 transition">
+                             <a href="{{ $manageUrl }}"
+                                class="mt-3 w-full inline-flex justify-center items-center px-4 py-2.5 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700 transition">
                                 Already registered? Manage your booking
                             </a>
                         @endauth
