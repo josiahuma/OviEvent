@@ -38,6 +38,13 @@
         $nextDateForChip = $nextFuture
             ? $nextFuture->session_date
             : optional($sortedSessions->first())->session_date;
+
+        // Is there any upcoming session?
+        $firstUpcoming = $event->sessions
+            ->sortBy('session_date')
+            ->first(fn($s) => \Carbon\Carbon::parse($s->session_date)->isFuture());
+
+        $hasUpcoming = !is_null($firstUpcoming);
     @endphp
 
     @section('title', $ogTitle)
@@ -228,21 +235,26 @@
                         </div>
 
                         {{-- Register / Manage buttons --}}
-                        <a href="{{ route('events.register.create', $event) }}"
-                           class="mt-5 w-full inline-flex justify-center items-center px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition">
-                            Register
-                        </a>
-
-                        @auth
-                            <a href="{{ route('my.tickets') }}"
-                               class="mt-2 w-full inline-flex justify-center items-center px-4 py-2.5 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700 transition">
-                                Manage my tickets
+                        @if ($hasUpcoming)
+                            <a href="{{ route('events.register.create', $event) }}"
+                            class="mt-5 w-full inline-flex justify-center items-center px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition">
+                                Register
                             </a>
                         @else
-                            <a href="{{ route('events.ticket.find', $event) }}"
-                               class="mt-2 w-full inline-flex justify-center items-center px-4 py-2.5 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700 transition">
-                                Already registered? Manage your booking
-                            </a>
+                            <span class="mt-5 w-full inline-flex justify-center items-center px-4 py-2.5 rounded-xl bg-gray-100 text-gray-400 font-medium cursor-not-allowed select-none">
+                                Registration closed
+                            </span>
+                        @endif
+
+                        @php
+                            $manageUrl = auth()->check()
+                                ? route('my.tickets')
+                                : route('events.ticket.find', $event);
+                        @endphp
+                        <a href="{{ $manageUrl }}"
+                        class="mt-3 w-full inline-flex justify-center items-center px-4 py-2.5 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700 transition">
+                            Already registered? Manage your booking
+                        </a>
                         @endauth
 
                         @if ($event->avatar_url)
