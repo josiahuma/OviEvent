@@ -25,10 +25,10 @@
                         <x-nav-link :href="route('my.tickets')" :active="request()->routeIs('my.tickets*')">
                             My tickets
                         </x-nav-link>
-                    @endauth
-
-                    @auth
                         <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
+                            Manage Events
+                        </x-nav-link>
+                        <x-nav-link :href="route('events.create')" :active="request()->routeIs('events.create')">
                             Create Events
                         </x-nav-link>
                     @endauth
@@ -94,6 +94,10 @@
                 </x-responsive-nav-link>
 
                 <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
+                    Manage Events
+                </x-responsive-nav-link>
+
+                <x-responsive-nav-link :href="route('events.create')" :active="request()->routeIs('events.create')">
                     Create Events
                 </x-responsive-nav-link>
             @endauth

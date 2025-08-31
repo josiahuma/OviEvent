@@ -53,5 +53,6 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
+@include('layouts.footer')
 </body>
 </html>
