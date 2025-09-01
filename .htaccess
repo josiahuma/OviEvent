@@ -1,4 +1,9 @@
-<IfModule mod_rewite.c>
-    RewriteEngine on
-    RewriteRule ^(.*)$ public/$1 [L]
+# .htaccess for ovievent.com
+<IfModule mod_rewrite.c>
+RewriteEngine On
+
+# Force everything on ovievent.com (with or without www) to eventib.com
+RewriteCond %{HTTP_HOST} ^ovievent\.com$ [NC,OR]
+RewriteCond %{HTTP_HOST} ^www\.ovievent\.com$ [NC]
+RewriteRule ^(.*)$ https://eventib.com/$1 [R=301,L,QSA]
 </IfModule>
